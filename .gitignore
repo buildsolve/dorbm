@@ -13,5 +13,4 @@ backend/backend.err
 *.log
 .DS_Store
 Thumbs.db
-backend/public/
 export.json
