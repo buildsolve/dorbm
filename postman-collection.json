@@ -1,0 +1,116 @@
+{
+  "info": {
+    "name": "CakeERP API",
+    "description": "Full REST API collection for CakeERP — Cake Production Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "cakeerp"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:4000/api" },
+    { "key": "access_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": ["const r = pm.response.json();", "pm.collectionVariables.set('access_token', r.access_token);", "pm.test('Login OK', () => pm.response.to.have.status(200));"] } }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\"email\":\"admin@cakeerp.com\",\"password\":\"admin123\"}", "options": { "raw": { "language": "json" } } }
+          }
+        },
+        { "name": "Get Profile", "request": { "method": "GET", "url": "{{base_url}}/auth/profile" } },
+        { "name": "List Users", "request": { "method": "GET", "url": "{{base_url}}/auth/users" } }
+      ]
+    },
+    {
+      "name": "Inventory — Ingredients",
+      "item": [
+        { "name": "List Ingredients", "request": { "method": "GET", "url": "{{base_url}}/inventory/ingredients" } },
+        { "name": "Get Ingredient", "request": { "method": "GET", "url": "{{base_url}}/inventory/ingredients/{{ingredient_id}}" } },
+        { "name": "Inventory Valuation", "request": { "method": "GET", "url": "{{base_url}}/inventory/ingredients/valuation" } },
+        { "name": "Create Ingredient", "request": { "method": "POST", "url": "{{base_url}}/inventory/ingredients", "body": { "mode": "raw", "raw": "{\"code\":\"ING999\",\"name\":\"Test Ingredient\",\"unit\":\"KG\",\"unitCost\":2.50,\"reorderLevel\":10}", "options": { "raw": { "language": "json" } } } } },
+        { "name": "Update Ingredient", "request": { "method": "PATCH", "url": "{{base_url}}/inventory/ingredients/{{ingredient_id}}", "body": { "mode": "raw", "raw": "{\"unitCost\":3.00}", "options": { "raw": { "language": "json" } } } } },
+        { "name": "Delete Ingredient", "request": { "method": "DELETE", "url": "{{base_url}}/inventory/ingredients/{{ingredient_id}}" } }
+      ]
+    },
+    {
+      "name": "Inventory — Suppliers",
+      "item": [
+        { "name": "List Suppliers", "request": { "method": "GET", "url": "{{base_url}}/inventory/suppliers" } },
+        { "name": "Create Supplier", "request": { "method": "POST", "url": "{{base_url}}/inventory/suppliers", "body": { "mode": "raw", "raw": "{\"code\":\"SUP999\",\"name\":\"Test Supplier\",\"email\":\"test@supplier.com\"}", "options": { "raw": { "language": "json" } } } } }
+      ]
+    },
+    {
+      "name": "Inventory — Stock",
+      "item": [
+        { "name": "Stock Transactions", "request": { "method": "GET", "url": "{{base_url}}/inventory/stock/transactions" } },
+        { "name": "Low Stock Alerts", "request": { "method": "GET", "url": "{{base_url}}/inventory/stock/alerts/low-stock" } },
+        { "name": "Stock In", "request": { "method": "POST", "url": "{{base_url}}/inventory/stock/stock-in", "body": { "mode": "raw", "raw": "{\"ingredientId\":\"{{ingredient_id}}\",\"quantity\":50,\"unitCost\":1.20,\"batchNumber\":\"BATCH-TEST\"}", "options": { "raw": { "language": "json" } } } } },
+        { "name": "Stock Out", "request": { "method": "POST", "url": "{{base_url}}/inventory/stock/stock-out", "body": { "mode": "raw", "raw": "{\"ingredientId\":\"{{ingredient_id}}\",\"quantity\":5,\"notes\":\"Used in production\"}", "options": { "raw": { "language": "json" } } } } },
+        { "name": "Record Wastage", "request": { "method": "POST", "url": "{{base_url}}/inventory/stock/wastage", "body": { "mode": "raw", "raw": "{\"ingredientId\":\"{{ingredient_id}}\",\"quantity\":1,\"type\":\"WASTAGE\",\"notes\":\"Spilled\"}", "options": { "raw": { "language": "json" } } } } }
+      ]
+    },
+    {
+      "name": "Recipes",
+      "item": [
+        { "name": "List Recipes", "request": { "method": "GET", "url": "{{base_url}}/recipes" } },
+        { "name": "Get Recipe", "request": { "method": "GET", "url": "{{base_url}}/recipes/{{recipe_id}}" } },
+        { "name": "Recipe Cost", "request": { "method": "GET", "url": "{{base_url}}/recipes/{{recipe_id}}/cost" } },
+        { "name": "Version History", "request": { "method": "GET", "url": "{{base_url}}/recipes/{{recipe_id}}/versions" } },
+        { "name": "Create Recipe", "request": { "method": "POST", "url": "{{base_url}}/recipes", "body": { "mode": "raw", "raw": "{\"code\":\"RCP999\",\"name\":\"Test Recipe\",\"yield\":1,\"yieldUnit\":\"cake\",\"laborCost\":5,\"overheadCost\":2,\"components\":[]}", "options": { "raw": { "language": "json" } } } } }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        { "name": "List Products", "request": { "method": "GET", "url": "{{base_url}}/products" } },
+        { "name": "Top by Margin", "request": { "method": "GET", "url": "{{base_url}}/products/top-margin" } },
+        { "name": "List Categories", "request": { "method": "GET", "url": "{{base_url}}/products/categories" } },
+        { "name": "Create Product", "request": { "method": "POST", "url": "{{base_url}}/products", "body": { "mode": "raw", "raw": "{\"code\":\"PRD999\",\"name\":\"Test Cake\",\"sellingPrice\":25.00,\"laborCost\":5,\"overheadCost\":2,\"packagingCost\":1}", "options": { "raw": { "language": "json" } } } } }
+      ]
+    },
+    {
+      "name": "Production",
+      "item": [
+        { "name": "List Plans", "request": { "method": "GET", "url": "{{base_url}}/production/plans" } },
+        { "name": "Get Plan", "request": { "method": "GET", "url": "{{base_url}}/production/plans/{{plan_id}}" } },
+        { "name": "Pick List", "request": { "method": "GET", "url": "{{base_url}}/production/plans/{{plan_id}}/pick-list" } },
+        { "name": "Confirm Plan", "request": { "method": "POST", "url": "{{base_url}}/production/plans/{{plan_id}}/confirm" } },
+        { "name": "Create Plan", "request": { "method": "POST", "url": "{{base_url}}/production/plans", "body": { "mode": "raw", "raw": "{\"planDate\":\"2026-06-11\",\"weekNumber\":24,\"lines\":[]}", "options": { "raw": { "language": "json" } } } } },
+        { "name": "List Batches", "request": { "method": "GET", "url": "{{base_url}}/production/batches" } },
+        { "name": "Start Batch", "request": { "method": "POST", "url": "{{base_url}}/production/batches/{{batch_id}}/start" } },
+        { "name": "Complete Batch", "request": { "method": "POST", "url": "{{base_url}}/production/batches/{{batch_id}}/complete", "body": { "mode": "raw", "raw": "{\"actualQty\":10,\"wastageQty\":0.5}", "options": { "raw": { "language": "json" } } } } }
+      ]
+    },
+    {
+      "name": "Storage",
+      "item": [
+        { "name": "List Storage Records", "request": { "method": "GET", "url": "{{base_url}}/storage" } },
+        { "name": "Stock Summary", "request": { "method": "GET", "url": "{{base_url}}/storage/summary" } },
+        { "name": "Expiring Stock", "request": { "method": "GET", "url": "{{base_url}}/storage/expiring?days=7" } },
+        { "name": "List Locations", "request": { "method": "GET", "url": "{{base_url}}/storage/locations" } },
+        { "name": "Record Movement", "request": { "method": "POST", "url": "{{base_url}}/storage/{{record_id}}/movement", "body": { "mode": "raw", "raw": "{\"type\":\"OUT\",\"quantity\":2,\"notes\":\"Dispatched to customer\"}", "options": { "raw": { "language": "json" } } } } }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        { "name": "Overview", "request": { "method": "GET", "url": "{{base_url}}/dashboard/overview" } },
+        { "name": "Production Efficiency", "request": { "method": "GET", "url": "{{base_url}}/dashboard/production-efficiency" } },
+        { "name": "Top Products", "request": { "method": "GET", "url": "{{base_url}}/dashboard/top-products" } },
+        { "name": "Stock Trend (30d)", "request": { "method": "GET", "url": "{{base_url}}/dashboard/stock-trend?days=30" } },
+        { "name": "COGS", "request": { "method": "GET", "url": "{{base_url}}/dashboard/cogs" } },
+        { "name": "Forecast", "request": { "method": "GET", "url": "{{base_url}}/dashboard/forecast" } }
+      ]
+    }
+  ]
+}

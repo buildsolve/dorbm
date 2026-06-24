@@ -1,0 +1,520 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTH ====================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("INVENTORY")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ==================== TEAM / EMPLOYEES ====================
+
+model Employee {
+  id          String   @id @default(uuid())
+  name        String
+  role        String   @default("KONDITOR")
+  weeklyHours Float    @default(40)
+  hourlyRate  Float    @default(18)
+  notes         String?
+  availableDays String?  // JSON array e.g. ["MON","TUE","WED","THU","FRI"]
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("employees")
+}
+
+// ==================== INVENTORY MANAGEMENT ====================
+
+model Supplier {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ingredients  Ingredient[]
+  stockIns     StockTransaction[]
+
+  @@map("suppliers")
+}
+
+model Ingredient {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  description     String?
+  unit            String
+  unitCost        Float    @default(0)
+  reorderLevel    Float    @default(0)
+  currentStock    Float    @default(0)
+  storageLocation String?
+  allergenInfo    String?
+  supplierId      String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  supplier          Supplier?          @relation(fields: [supplierId], references: [id])
+  stockTransactions StockTransaction[]
+  recipeComponents  RecipeComponent[]
+
+  @@map("ingredients")
+}
+
+model StockTransaction {
+  id            String   @id @default(uuid())
+  ingredientId  String
+  type          String
+  quantity      Float
+  unitCost      Float?
+  batchNumber   String?
+  expiryDate    DateTime?
+  supplierId    String?
+  notes         String?
+  referenceId   String?
+  referenceType String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  supplier   Supplier?  @relation(fields: [supplierId], references: [id])
+
+  @@map("stock_transactions")
+}
+
+// ==================== RECIPE MANAGEMENT ====================
+
+model Recipe {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  description  String?
+  yield        Float
+  yieldUnit    String   @default("units")
+  laborCost           Float    @default(0)
+  overheadCost        Float    @default(0)
+  bakingTimeMinutes   Int      @default(0)
+  labourTimeMinutes   Int      @default(0)
+  notes               String?
+  version             Int      @default(1)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  components     RecipeComponent[]
+  products       Product[]
+  recipeVersions RecipeVersion[]
+  stages         RecipeStage[]
+
+  @@map("recipes")
+}
+
+model RecipeStage {
+  id                String   @id @default(uuid())
+  recipeId          String
+  sortOrder         Int      @default(0)
+  name              String
+  stageType         String   @default("PREP")
+  labourTimeMinutes Int      @default(0)
+  bakingTimeMinutes Int      @default(0)
+  dayOffset         Int      @default(0)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  recipe      Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  weeklyTasks WeeklyTask[]
+
+  @@map("recipe_stages")
+}
+
+model RecipeComponent {
+  id           String   @id @default(uuid())
+  recipeId     String
+  ingredientId String
+  quantity     Float
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([recipeId, ingredientId])
+  @@map("recipe_components")
+}
+
+model RecipeVersion {
+  id          String   @id @default(uuid())
+  recipeId    String
+  version     Int
+  snapshot    String
+  changedBy   String?
+  changeNotes String?
+  createdAt   DateTime @default(now())
+
+  recipe Recipe @relation(fields: [recipeId], references: [id])
+
+  @@map("recipe_versions")
+}
+
+// ==================== PRODUCT MANAGEMENT ====================
+
+model ProductCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id            String  @id @default(uuid())
+  code          String  @unique
+  name          String
+  description   String?
+  categoryId    String?
+  recipeId      String?
+  sellingPrice  Float   @default(0)
+  laborCost     Float   @default(0)
+  overheadCost  Float   @default(0)
+  packagingCost Float   @default(0)
+  allergenInfo  String?
+  shelfLifeDays Int?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category        ProductCategory?    @relation(fields: [categoryId], references: [id])
+  recipe          Recipe?             @relation(fields: [recipeId], references: [id])
+  productionLines ProductionPlanLine[]
+  storageRecords  StorageRecord[]
+  essoCostModel   EssoCostModel?
+  essoScenarios   EssoScenario[]
+  weeklyTasks     WeeklyTask[]
+
+  @@map("products")
+}
+
+// ==================== PRODUCTION PLANNING ====================
+
+model ProductionPlan {
+  id         String   @id @default(uuid())
+  planDate   DateTime
+  weekNumber Int?
+  status     String   @default("DRAFT")
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lines   ProductionPlanLine[]
+  batches ProductionBatch[]
+
+  @@map("production_plans")
+}
+
+model ProductionPlanLine {
+  id              String   @id @default(uuid())
+  planId          String
+  productId       String
+  plannedQuantity Float
+  actualQuantity  Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  plan    ProductionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id])
+
+  @@map("production_plan_lines")
+}
+
+model ProductionBatch {
+  id           String    @id @default(uuid())
+  planId       String?
+  productId    String?
+  batchNumber  String    @unique
+  plannedQty   Float
+  actualQty    Float?
+  wastageQty   Float?
+  yieldPercent Float?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  status       String    @default("PLANNED")
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  plan             ProductionPlan?  @relation(fields: [planId], references: [id])
+  ingredientUsages IngredientUsage[]
+
+  @@map("production_batches")
+}
+
+model IngredientUsage {
+  id           String   @id @default(uuid())
+  batchId      String
+  ingredientId String
+  plannedQty   Float
+  actualQty    Float?
+  createdAt    DateTime @default(now())
+
+  batch ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("ingredient_usages")
+}
+
+// ==================== WEEKLY PRODUCTION PLANNING ====================
+
+model WeeklyPlan {
+  id          String   @id @default(uuid())
+  year        Int
+  weekNumber  Int
+  weekStart   DateTime
+  notes       String?
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks WeeklyTask[]
+
+  @@unique([year, weekNumber])
+  @@map("weekly_plans")
+}
+
+model WeeklyTask {
+  id               String    @id @default(uuid())
+  weeklyPlanId     String
+  taskType         String    @default("PRODUCTION")
+  productId        String?
+  recipeStageId    String?
+  plannedDay       String
+  quantity         Float     @default(1)
+  assignedTo       String?
+  estimatedMinutes Int       @default(0)
+  cashAmount       Float     @default(0)
+  status           String    @default("PLANNED")
+  notes            String?
+  sortOrder        Int       @default(0)
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  weeklyPlan     WeeklyPlan     @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
+  product        Product?       @relation(fields: [productId], references: [id])
+  recipeStage    RecipeStage?   @relation(fields: [recipeStageId], references: [id])
+  storageRecords StorageRecord[]
+
+  @@map("weekly_tasks")
+}
+
+model StorageLocation {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  capacity    Float?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  storageRecords StorageRecord[]
+
+  @@map("storage_locations")
+}
+
+model StorageRecord {
+  id             String    @id @default(uuid())
+  productId      String
+  locationId     String?
+  weeklyTaskId   String?
+  batchNumber    String
+  quantity       Float
+  reservedQty    Float     @default(0)
+  productionDate DateTime?
+  expiryDate     DateTime?
+  unitCost       Float?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  product     Product          @relation(fields: [productId], references: [id])
+  location    StorageLocation? @relation(fields: [locationId], references: [id])
+  weeklyTask  WeeklyTask?      @relation(fields: [weeklyTaskId], references: [id])
+  movements   StorageMovement[]
+
+  @@map("storage_records")
+}
+
+model StorageMovement {
+  id              String   @id @default(uuid())
+  storageRecordId String
+  type            String
+  quantity        Float
+  notes           String?
+  referenceId     String?
+  createdAt       DateTime @default(now())
+
+  storageRecord StorageRecord @relation(fields: [storageRecordId], references: [id])
+
+  @@map("storage_movements")
+}
+
+// ==================== ESSO — ECONOMIES OF SCALE OPTIMIZATION ====================
+
+model EssoCostModel {
+  id                  String   @id @default(uuid())
+  productId           String   @unique
+  fixedOverhead       Float    @default(0)    // weekly fixed overhead (rent, utilities)
+  laborFixed          Float    @default(0)    // weekly fixed labor (salaried staff)
+  laborVariable       Float    @default(0)    // marginal labor cost per unit
+  minBatch            Float    @default(1)    // minimum viable batch size
+  maxCapacity         Float    @default(500)  // max units per week
+  optimalBatchHint    Float    @default(0)    // user hint for optimal batch (0 = auto)
+  qualityFactor       Float    @default(0.002) // diseconomy rate above optimal batch
+  baseWasteRate       Float    @default(0.02) // baseline waste rate (2%)
+  notes               String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  product   Product           @relation(fields: [productId], references: [id])
+  tiers     EssoCostTier[]
+  scenarios EssoScenario[]
+
+  @@map("esso_cost_models")
+}
+
+model EssoCostTier {
+  id          String   @id @default(uuid())
+  costModelId String
+  label       String
+  minQty      Float                           // monthly quantity threshold to unlock
+  discountPct Float    @default(0)            // ingredient cost discount at this tier
+  createdAt   DateTime @default(now())
+
+  costModel EssoCostModel @relation(fields: [costModelId], references: [id], onDelete: Cascade)
+
+  @@map("esso_cost_tiers")
+}
+
+model EssoCapacity {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   @default("OVEN")         // OVEN | LABOR | STORAGE | DAILY
+  maxUnits  Float
+  unitLabel String   @default("units/week")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("esso_capacities")
+}
+
+model EssoScenario {
+  id          String   @id @default(uuid())
+  name        String
+  productId   String
+  costModelId String?
+  minVolume   Float    @default(10)
+  maxVolume   Float    @default(500)
+  stepSize    Float    @default(5)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product   Product        @relation(fields: [productId], references: [id])
+  costModel EssoCostModel? @relation(fields: [costModelId], references: [id])
+  results   EssoResult[]
+
+  @@map("esso_scenarios")
+}
+
+model EssoResult {
+  id               String   @id @default(uuid())
+  scenarioId       String
+  sweetSpotVolume  Float
+  breakEvenVolume  Float
+  optimalMarginPct Float
+  costCurveJson    String   // JSON array of curve points
+  recommendJson    String   // JSON array of recommendations
+  runAt            DateTime @default(now())
+
+  scenario EssoScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@map("esso_results")
+}
+
+// ==================== BUSINESS JOURNAL ====================
+
+model BusinessJournalEntry {
+  id          String   @id @default(uuid())
+  status      String   // ING | PLN | BCK | BRT | ELG | VKF
+  productId   String?
+  productName String?
+  batchNumber String?
+  quantity    Float?
+  performedBy String?
+  notes       String?
+  refType     String?  // WEEKLY_TASK | STORAGE_RECORD | STOCK_TRANSACTION | STORAGE_MOVEMENT
+  refId       String?
+  createdAt   DateTime @default(now())
+
+  @@map("business_journal_entries")
+}
+
+// ==================== STAMMDATEN ====================
+
+model Equipment {
+  id        String   @id @default(uuid())
+  type      String   // OFEN, TIEFKUEHLER, KUEHLSCHRANK, MIXER, SONSTIGES
+  name      String
+  size      String?  // GROSS, MITTEL, KLEIN
+  quantity  Int      @default(1)
+  powerKw   Float?   // rated power consumption in kW
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("equipment")
+}
+
+model BuildingCost {
+  id          String   @id @default(uuid())
+  name        String
+  sqm         Float
+  rentPerSqm  Float
+  isActive    Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("building_costs")
+}

@@ -1,0 +1,44 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+[2m15:53:22[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Public/cakeerp/frontend/src/index.css:44:5: The `ring-brand-500` class does not exist. If `ring-brand-500` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Public/cakeerp/frontend/src/index.css[39m:44:4
+[33m  42 |    }
+  43 |    .btn:focus-visible {
+  44 |      @apply ring-2 ring-offset-1 ring-brand-500;
+     |      ^
+  45 |    }
+  46 |  [39m
+      at Input.error (C:\Users\Public\cakeerp\frontend\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\Public\cakeerp\frontend\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\Public\cakeerp\frontend\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async compileCSS (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:36898:21)
+      at async TransformPluginContext.transform (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:36171:11)
+      at async PluginContainer.transform (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+[2m15:53:22[22m [31m[1m[vite][22m[39m Pre-transform error: [postcss] C:/Users/Public/cakeerp/frontend/src/index.css:44:5: The `ring-brand-500` class does not exist. If `ring-brand-500` is a custom class, make sure it is defined within a `@layer` directive.
+[2m15:58:21[22m [31m[1m[vite][22m[39m Pre-transform error: [postcss] C:/Users/Public/cakeerp/frontend/src/index.css:40:5: The `bg-sap-500` class does not exist. If `bg-sap-500` is a custom class, make sure it is defined within a `@layer` directive.
+[2m15:58:22[22m [31m[1m[vite][22m[39m [31mInternal server error: [postcss] C:/Users/Public/cakeerp/frontend/src/index.css:40:5: The `bg-sap-500` class does not exist. If `bg-sap-500` is a custom class, make sure it is defined within a `@layer` directive.[39m
+  Plugin: [35mvite:css[39m
+  File: [36mC:/Users/Public/cakeerp/frontend/src/index.css[39m:40:4
+[33m  38 |    /* Emphasized (filled blue) */
+  39 |    .btn-primary {
+  40 |      @apply btn bg-sap-500 text-white border-sap-500;
+     |      ^
+  41 |      @apply hover:bg-sap-600 hover:border-sap-600;
+  42 |      @apply active:bg-sap-700 active:border-sap-700;[39m
+      at Input.error (C:\Users\Public\cakeerp\frontend\node_modules\postcss\lib\input.js:135:16)
+      at AtRule.error (C:\Users\Public\cakeerp\frontend\node_modules\postcss\lib\node.js:146:32)
+      at processApply (C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)
+      at C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9
+      at C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50
+      at async plugins (C:\Users\Public\cakeerp\frontend\node_modules\tailwindcss\lib\plugin.js:38:17)
+      at async LazyResult.runAsync (C:\Users\Public\cakeerp\frontend\node_modules\postcss\lib\lazy-result.js:293:11)
+      at async compileCSS (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:36898:21)
+      at async TransformPluginContext.transform (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:36171:11)
+      at async PluginContainer.transform (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///C:/Users/Public/cakeerp/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)

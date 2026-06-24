@@ -1,0 +1,545 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-background-tertiary);color:var(--color-text-primary)}
+.app{display:flex;height:100vh;min-height:700px;overflow:hidden}
+.sidebar{width:220px;min-width:220px;background:var(--color-background-primary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-logo{padding:20px 16px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.sidebar-logo h1{font-size:16px;font-weight:500;color:var(--color-text-primary)}
+.sidebar-logo p{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+.nav-section{padding:8px 0}
+.nav-label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);padding:8px 16px 4px;letter-spacing:.06em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;border-radius:0;transition:background .15s}
+.nav-item:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.nav-item.active{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500;border-left:2px solid #3266ad}
+.nav-item i{font-size:16px;width:20px}
+.main{flex:1;overflow-y:auto;background:var(--color-background-tertiary)}
+.topbar{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar h2{font-size:16px;font-weight:500}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--border-radius-md);font-size:11px;font-weight:500}
+.badge-success{background:var(--color-background-success);color:var(--color-text-success)}
+.badge-warning{background:var(--color-background-warning);color:var(--color-text-warning)}
+.badge-danger{background:var(--color-background-danger);color:var(--color-text-danger)}
+.badge-info{background:var(--color-background-info);color:var(--color-text-info)}
+.content{padding:20px 24px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.metric-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.metric-card .label{font-size:11px;color:var(--color-text-secondary);margin-bottom:6px}
+.metric-card .value{font-size:22px;font-weight:500}
+.metric-card .sub{font-size:11px;color:var(--color-text-secondary);margin-top:4px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px 18px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-header h3{font-size:14px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);font-size:12px;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:#3266ad;color:#fff;border-color:#3266ad}
+.btn-primary:hover{background:#285494}
+.btn-sm{padding:4px 10px;font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;font-size:11px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
+td{padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--color-background-secondary)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.progress-bar{height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);width:460px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between}
+.modal-body{padding:20px}
+.modal-footer{padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;justify-content:flex-end;gap:8px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;font-size:11px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);margin-right:4px;margin-bottom:4px}
+.chart-bar-horiz{display:flex;flex-direction:column;gap:10px}
+.chart-bar-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.chart-bar-label{width:120px;color:var(--color-text-secondary);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-bar-track{flex:1;height:18px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;font-size:10px;color:#fff;font-weight:500}
+.alert{padding:10px 14px;border-radius:var(--border-radius-md);font-size:12px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.alert-warning{background:var(--color-background-warning);color:var(--color-text-warning)}
+.alert-danger{background:var(--color-background-danger);color:var(--color-text-danger)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-green{background:#63992a}
+.dot-amber{background:#ba7517}
+.dot-red{background:#e24b4a}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+.stat-row:last-child{border-bottom:none}
+.timeline-item{display:flex;gap:12px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+.timeline-item:last-child{border-bottom:none}
+.timeline-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+</style>
+
+<div class="app" id="app">
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h1><i class="ti ti-cake" style="color:#3266ad"></i> CakePro ERP</h1>
+    <p>Production Management</p>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Core Modules</div>
+    <div class="nav-item active" onclick="nav('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+    <div class="nav-item" onclick="nav('inventory')" id="nav-inventory"><i class="ti ti-packages"></i>Inventory</div>
+    <div class="nav-item" onclick="nav('recipes')" id="nav-recipes"><i class="ti ti-recipe"></i>Recipes</div>
+    <div class="nav-item" onclick="nav('products')" id="nav-products"><i class="ti ti-cake"></i>Products</div>
+    <div class="nav-item" onclick="nav('production')" id="nav-production"><i class="ti ti-tool"></i>Production</div>
+    <div class="nav-item" onclick="nav('storage')" id="nav-storage"><i class="ti ti-building-warehouse"></i>Storage</div>
+  </div>
+  <div class="nav-section" style="border-top:0.5px solid var(--color-border-tertiary);padding-top:8px;margin-top:auto">
+    <div class="nav-label">System</div>
+    <div class="nav-item"><i class="ti ti-settings"></i>Settings</div>
+    <div class="nav-item"><i class="ti ti-user"></i>Admin</div>
+  </div>
+</div>
+
+<div class="main" id="main-area">
+</div>
+</div>
+
+<script>
+const DB = {
+  inventory: [
+    {id:1,name:'All-Purpose Flour',sku:'RM-001',category:'Dry',unit:'kg',stock:450,reorder:100,cost:1.2,supplier:'Mill Fresh Co.',batch:'BT2024-01',expiry:'2025-08-01',location:'Rack A1',status:'ok'},
+    {id:2,name:'Granulated Sugar',sku:'RM-002',category:'Dry',unit:'kg',stock:320,reorder:80,cost:0.9,supplier:'Sweet Source Ltd',batch:'BT2024-02',expiry:'2026-01-01',location:'Rack A2',status:'ok'},
+    {id:3,name:'Unsalted Butter',sku:'RM-003',category:'Dairy',unit:'kg',stock:85,reorder:50,cost:7.5,supplier:'Dairy Direct',batch:'BT2024-12',expiry:'2025-02-15',location:'Fridge B1',status:'low'},
+    {id:4,name:'Fresh Eggs',sku:'RM-004',category:'Dairy',unit:'dozen',stock:40,reorder:30,cost:3.2,supplier:'Farm Fresh',batch:'BT2025-01',expiry:'2025-01-30',location:'Fridge B2',status:'low'},
+    {id:5,name:'Whole Milk',sku:'RM-005',category:'Dairy',unit:'L',stock:120,reorder:40,cost:1.1,supplier:'Dairy Direct',batch:'BT2025-01',expiry:'2025-01-25',location:'Fridge B3',status:'ok'},
+    {id:6,name:'Cocoa Powder',sku:'RM-006',category:'Dry',unit:'kg',stock:28,reorder:20,cost:8.5,supplier:'Choco World',batch:'BT2024-11',expiry:'2025-12-01',location:'Rack A3',status:'ok'},
+    {id:7,name:'Vanilla Extract',sku:'RM-007',category:'Flavoring',unit:'L',stock:12,reorder:5,cost:45.0,supplier:'Aroma House',batch:'BT2024-09',expiry:'2026-09-01',location:'Rack C1',status:'ok'},
+    {id:8,name:'Baking Powder',sku:'RM-008',category:'Dry',unit:'kg',stock:15,reorder:10,cost:4.2,supplier:'Mill Fresh Co.',batch:'BT2024-10',expiry:'2025-10-01',location:'Rack A4',status:'ok'},
+    {id:9,name:'Heavy Cream',sku:'RM-009',category:'Dairy',unit:'L',stock:18,reorder:20,cost:3.8,supplier:'Dairy Direct',batch:'BT2025-01',expiry:'2025-01-22',location:'Fridge B4',status:'critical'},
+    {id:10,name:'Fondant',sku:'RM-010',category:'Decoration',unit:'kg',stock:35,reorder:15,cost:12.0,supplier:'Deco Supplies',batch:'BT2024-12',expiry:'2025-06-01',location:'Rack D1',status:'ok'},
+  ],
+  recipes: [
+    {id:1,name:'Classic Vanilla Sponge',version:'v2.1',category:'Base',yield:1,unit:'8" cake',cost:8.4,status:'active',ingredients:[{id:1,name:'Flour',rmId:1,qty:0.4,unit:'kg'},{id:2,name:'Sugar',rmId:2,qty:0.35,unit:'kg'},{id:3,name:'Butter',rmId:3,qty:0.25,unit:'kg'},{id:4,name:'Eggs',rmId:4,qty:0.5,unit:'dozen'},{id:5,name:'Milk',rmId:5,qty:0.2,unit:'L'},{id:6,name:'Vanilla',rmId:7,qty:0.02,unit:'L'},{id:7,name:'Baking Powder',rmId:8,qty:0.01,unit:'kg'}]},
+    {id:2,name:'Chocolate Ganache Cake',version:'v1.3',category:'Premium',yield:1,unit:'8" cake',cost:14.2,status:'active',ingredients:[{id:1,name:'Flour',rmId:1,qty:0.35,unit:'kg'},{id:2,name:'Sugar',rmId:2,qty:0.3,unit:'kg'},{id:3,name:'Butter',rmId:3,qty:0.3,unit:'kg'},{id:4,name:'Eggs',rmId:4,qty:0.5,unit:'dozen'},{id:5,name:'Cocoa',rmId:6,qty:0.12,unit:'kg'},{id:6,name:'Heavy Cream',rmId:9,qty:0.25,unit:'L'}]},
+    {id:3,name:'Red Velvet Classic',version:'v1.0',category:'Specialty',yield:1,unit:'8" cake',cost:11.8,status:'active',ingredients:[{id:1,name:'Flour',rmId:1,qty:0.38,unit:'kg'},{id:2,name:'Sugar',rmId:2,qty:0.32,unit:'kg'},{id:3,name:'Butter',rmId:3,qty:0.2,unit:'kg'},{id:4,name:'Eggs',rmId:4,qty:0.5,unit:'dozen'},{id:5,name:'Cocoa',rmId:6,qty:0.03,unit:'kg'},{id:6,name:'Milk',rmId:5,qty:0.25,unit:'L'}]},
+    {id:4,name:'Fondant Decoration Layer',version:'v1.0',category:'Decoration',yield:1,unit:'layer',cost:6.2,status:'active',ingredients:[{id:1,name:'Fondant',rmId:10,qty:0.5,unit:'kg'},{id:2,name:'Vanilla',rmId:7,qty:0.005,unit:'L'}]},
+  ],
+  products: [
+    {id:1,name:'Classic Birthday Cake',category:'Birthday',recipeId:1,rmCost:8.4,laborCost:6.0,overhead:3.2,price:45.0,allergens:['Gluten','Dairy','Eggs'],status:'active'},
+    {id:2,name:'Wedding Tier (Single)',category:'Wedding',recipeId:1,rmCost:8.4,laborCost:12.0,overhead:5.0,price:85.0,allergens:['Gluten','Dairy','Eggs'],status:'active'},
+    {id:3,name:'Chocolate Celebration Cake',category:'Specialty',recipeId:2,rmCost:14.2,laborCost:8.0,overhead:4.0,price:65.0,allergens:['Gluten','Dairy','Eggs','Soy'],status:'active'},
+    {id:4,name:'Red Velvet Delight',category:'Specialty',recipeId:3,rmCost:11.8,laborCost:7.5,overhead:3.8,price:58.0,allergens:['Gluten','Dairy','Eggs'],status:'active'},
+    {id:5,name:'Fondant Art Cake',category:'Custom',recipeId:4,rmCost:16.2,laborCost:20.0,overhead:8.0,price:120.0,allergens:['Gluten','Dairy'],status:'active'},
+  ],
+  production: [
+    {id:1,date:'2025-01-20',product:'Classic Birthday Cake',productId:1,planned:12,actual:11,status:'completed',wastage:0.5,batch:'PROD-2025-001'},
+    {id:2,date:'2025-01-20',product:'Chocolate Celebration Cake',productId:3,planned:8,actual:8,status:'completed',wastage:0.2,batch:'PROD-2025-002'},
+    {id:3,date:'2025-01-21',product:'Red Velvet Delight',productId:4,planned:10,actual:0,status:'in-progress',wastage:0,batch:'PROD-2025-003'},
+    {id:4,date:'2025-01-21',product:'Wedding Tier (Single)',productId:2,planned:5,actual:0,status:'planned',wastage:0,batch:'PROD-2025-004'},
+    {id:5,date:'2025-01-22',product:'Fondant Art Cake',productId:5,planned:4,actual:0,status:'planned',wastage:0,batch:'PROD-2025-005'},
+    {id:6,date:'2025-01-22',product:'Classic Birthday Cake',productId:1,planned:15,actual:0,status:'planned',wastage:0,batch:'PROD-2025-006'},
+  ],
+  storage: [
+    {id:1,product:'Classic Birthday Cake',batch:'PROD-2025-001',qty:11,produced:'2025-01-20',bestBefore:'2025-01-23',location:'Cold Store A',available:8,reserved:3,status:'available'},
+    {id:2,product:'Chocolate Celebration Cake',batch:'PROD-2025-002',qty:8,produced:'2025-01-20',bestBefore:'2025-01-22',location:'Cold Store A',available:5,reserved:3,status:'expiring'},
+    {id:3,product:'Classic Birthday Cake',batch:'PROD-2024-098',qty:3,produced:'2025-01-18',bestBefore:'2025-01-21',location:'Cold Store B',available:3,reserved:0,status:'expired'},
+  ]
+};
+
+let currentPage = 'dashboard';
+let modal = null;
+
+function nav(page) {
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const el = document.getElementById('nav-'+page);
+  if(el) el.classList.add('active');
+  currentPage = page;
+  render(page);
+}
+
+function statusBadge(s) {
+  const map = {ok:'badge-success',low:'badge-warning',critical:'badge-danger',active:'badge-success','in-progress':'badge-info',completed:'badge-success',planned:'badge-warning',available:'badge-success',expiring:'badge-warning',expired:'badge-danger'};
+  const labels = {ok:'In Stock',low:'Low Stock',critical:'Critical'};
+  return `<span class="badge ${map[s]||'badge-info'}">${labels[s]||s}</span>`;
+}
+
+function margin(p){return Math.round((p.price-(p.rmCost+p.laborCost+p.overhead))/p.price*100)}
+
+function render(page) {
+  const area = document.getElementById('main-area');
+  if(page==='dashboard') area.innerHTML = dashboardHTML();
+  else if(page==='inventory') area.innerHTML = inventoryHTML();
+  else if(page==='recipes') area.innerHTML = recipesHTML();
+  else if(page==='products') area.innerHTML = productsHTML();
+  else if(page==='production') area.innerHTML = productionHTML();
+  else if(page==='storage') area.innerHTML = storageHTML();
+  bindCharts(page);
+}
+
+function dashboardHTML(){
+  const totalInvValue = DB.inventory.reduce((a,i)=>a+i.stock*i.cost,0);
+  const lowStock = DB.inventory.filter(i=>i.status==='low'||i.status==='critical').length;
+  const todayProd = DB.production.filter(p=>p.date==='2025-01-21');
+  const efficiency = Math.round(DB.production.filter(p=>p.status==='completed').reduce((a,p)=>a+p.actual/p.planned,0)/DB.production.filter(p=>p.status==='completed').length*100);
+  const totalStorage = DB.storage.reduce((a,s)=>a+s.available,0);
+  return `
+<div class="topbar"><h2><i class="ti ti-layout-dashboard" style="margin-right:8px"></i>Management Dashboard</h2><div class="topbar-actions"><span class="badge badge-success"><span class="dot dot-green" style="margin-right:4px"></span>Live</span></div></div>
+<div class="content">
+<div class="metrics">
+<div class="metric-card"><div class="label">Inventory Value</div><div class="value" style="font-size:18px">€${totalInvValue.toLocaleString('en',{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div class="sub">${DB.inventory.length} materials tracked</div></div>
+<div class="metric-card"><div class="label">Low Stock Alerts</div><div class="value" style="color:#e24b4a">${lowStock}</div><div class="sub">Needs reorder</div></div>
+<div class="metric-card"><div class="label">Production Efficiency</div><div class="value">${efficiency}%</div><div class="sub">Completed batches</div></div>
+<div class="metric-card"><div class="label">Units in Storage</div><div class="value">${totalStorage}</div><div class="sub">Available for sale</div></div>
+<div class="metric-card"><div class="label">Active Products</div><div class="value">${DB.products.length}</div><div class="sub">Across ${[...new Set(DB.products.map(p=>p.category))].length} categories</div></div>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-header"><h3>Product Margins</h3></div>
+<div class="chart-bar-horiz">
+${DB.products.map(p=>{const m=margin(p);const col=m>50?'#1d9e75':m>35?'#ba7517':'#e24b4a';return`<div class="chart-bar-row"><div class="chart-bar-label">${p.name.substring(0,18)}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${m}%;background:${col}">${m}%</div></div><span style="font-size:11px;color:var(--color-text-secondary);min-width:36px">€${p.price}</span></div>`}).join('')}
+</div>
+</div>
+
+<div class="card">
+<div class="card-header"><h3>Inventory Health</h3></div>
+${DB.inventory.filter(i=>i.status!=='ok').map(i=>`<div class="alert ${i.status==='critical'?'alert-danger':'alert-warning'}"><i class="ti ti-alert-triangle"></i><span><b>${i.name}</b> — ${i.stock} ${i.unit} remaining (reorder: ${i.reorder})</span></div>`).join('')}
+<div style="margin-top:12px">
+${DB.inventory.slice(0,5).map(i=>{const pct=Math.min(100,Math.round(i.stock/300*100));const col=i.status==='critical'?'#e24b4a':i.status==='low'?'#ba7517':'#1d9e75';return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span>${i.name}</span><span style="color:var(--color-text-secondary)">${i.stock} ${i.unit}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div></div>`}).join('')}
+</div>
+</div>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-header"><h3>Today's Production</h3></div>
+<table>
+<thead><tr><th>Batch</th><th>Product</th><th>Planned</th><th>Status</th></tr></thead>
+<tbody>
+${DB.production.filter(p=>p.date>='2025-01-21').map(p=>`<tr><td style="font-family:var(--font-mono);font-size:10px">${p.batch}</td><td>${p.product.substring(0,20)}</td><td>${p.planned}</td><td>${statusBadge(p.status)}</td></tr>`).join('')}
+</tbody>
+</table>
+</div>
+
+<div class="card">
+<div class="card-header"><h3>COGS Breakdown</h3></div>
+<div style="position:relative;height:200px"><canvas id="cogsChart" role="img" aria-label="COGS breakdown by category">COGS data showing raw material, labor, and overhead costs.</canvas></div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:11px">
+<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#3266ad"></span>Raw Materials 52%</span>
+<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#1d9e75"></span>Labor 30%</span>
+<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#ba7517"></span>Overhead 18%</span>
+</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-header"><h3>Weekly Production Trend</h3></div>
+<div style="position:relative;height:200px"><canvas id="trendChart" role="img" aria-label="Weekly production output trend">Weekly production showing 7 days of output data.</canvas></div>
+</div>
+</div>`;
+}
+
+function inventoryHTML(){
+  return `
+<div class="topbar"><h2><i class="ti ti-packages" style="margin-right:8px"></i>Inventory Management</h2><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="showModal('stock-in')"><i class="ti ti-plus"></i>Stock In</button></div></div>
+<div class="content">
+<div class="metrics">
+<div class="metric-card"><div class="label">Total Materials</div><div class="value">${DB.inventory.length}</div></div>
+<div class="metric-card"><div class="label">Total Value</div><div class="value" style="font-size:16px">€${DB.inventory.reduce((a,i)=>a+i.stock*i.cost,0).toLocaleString('en',{maximumFractionDigits:0})}</div></div>
+<div class="metric-card"><div class="label">Low Stock</div><div class="value" style="color:#ba7517">${DB.inventory.filter(i=>i.status==='low').length}</div></div>
+<div class="metric-card"><div class="label">Critical</div><div class="value" style="color:#e24b4a">${DB.inventory.filter(i=>i.status==='critical').length}</div></div>
+</div>
+<div class="card">
+<div class="card-header"><h3>Raw Materials Register</h3><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="showModal('wastage')"><i class="ti ti-trash"></i>Record Wastage</button><button class="btn btn-sm"><i class="ti ti-download"></i>Export</button></div></div>
+<table>
+<thead><tr><th>SKU</th><th>Material</th><th>Category</th><th>Stock</th><th>Unit Cost</th><th>Total Value</th><th>Location</th><th>Batch</th><th>Status</th></tr></thead>
+<tbody>
+${DB.inventory.map(i=>`<tr>
+<td style="font-family:var(--font-mono);font-size:10px">${i.sku}</td>
+<td style="font-weight:500">${i.name}</td>
+<td><span class="tag">${i.category}</span></td>
+<td>${i.stock} ${i.unit}</td>
+<td>€${i.cost.toFixed(2)}</td>
+<td>€${(i.stock*i.cost).toFixed(0)}</td>
+<td style="font-size:11px;color:var(--color-text-secondary)">${i.location}</td>
+<td style="font-family:var(--font-mono);font-size:10px">${i.batch}</td>
+<td>${statusBadge(i.status)}</td>
+</tr>`).join('')}
+</tbody>
+</table>
+</div>
+</div>`;
+}
+
+function recipesHTML(){
+  return `
+<div class="topbar"><h2><i class="ti ti-recipe" style="margin-right:8px"></i>Recipe Management</h2><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="showModal('recipe')"><i class="ti ti-plus"></i>New Recipe</button></div></div>
+<div class="content">
+<div class="metrics">
+<div class="metric-card"><div class="label">Active Recipes</div><div class="value">${DB.recipes.length}</div></div>
+<div class="metric-card"><div class="label">Avg Recipe Cost</div><div class="value">€${(DB.recipes.reduce((a,r)=>a+r.cost,0)/DB.recipes.length).toFixed(2)}</div></div>
+<div class="metric-card"><div class="label">Categories</div><div class="value">${[...new Set(DB.recipes.map(r=>r.category))].length}</div></div>
+</div>
+${DB.recipes.map(r=>`
+<div class="card">
+<div class="card-header">
+<div><h3>${r.name} <span style="font-size:11px;font-weight:400;color:var(--color-text-secondary)">${r.version}</span></h3><div style="margin-top:4px"><span class="tag">${r.category}</span><span class="tag">${r.unit}</span></div></div>
+<div style="text-align:right"><div style="font-size:18px;font-weight:500">€${r.cost.toFixed(2)}</div><div style="font-size:11px;color:var(--color-text-secondary)">cost per ${r.unit}</div></div>
+</div>
+<table>
+<thead><tr><th>Ingredient</th><th>Quantity</th><th>Unit</th><th>Cost/Unit</th><th>Line Cost</th></tr></thead>
+<tbody>
+${r.ingredients.map(ing=>{const rm=DB.inventory.find(i=>i.id===ing.rmId)||{cost:0,unit:ing.unit};return`<tr><td>${ing.name}</td><td>${ing.qty}</td><td>${ing.unit}</td><td>€${rm.cost.toFixed(2)}</td><td>€${(ing.qty*rm.cost).toFixed(2)}</td></tr>`}).join('')}
+</tbody>
+</table>
+</div>`).join('')}
+</div>`;
+}
+
+function productsHTML(){
+  return `
+<div class="topbar"><h2><i class="ti ti-cake" style="margin-right:8px"></i>Product Management</h2><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="showModal('product')"><i class="ti ti-plus"></i>New Product</button></div></div>
+<div class="content">
+<div class="metrics">
+<div class="metric-card"><div class="label">Active Products</div><div class="value">${DB.products.length}</div></div>
+<div class="metric-card"><div class="label">Best Margin</div><div class="value" style="color:#1d9e75">${Math.max(...DB.products.map(p=>margin(p)))}%</div><div class="sub">${DB.products.find(p=>margin(p)===Math.max(...DB.products.map(p=>margin(p))))?.name.substring(0,16)}</div></div>
+<div class="metric-card"><div class="label">Avg Selling Price</div><div class="value">€${(DB.products.reduce((a,p)=>a+p.price,0)/DB.products.length).toFixed(0)}</div></div>
+<div class="metric-card"><div class="label">Avg COGS</div><div class="value">€${(DB.products.reduce((a,p)=>a+p.rmCost+p.laborCost+p.overhead,0)/DB.products.length).toFixed(0)}</div></div>
+</div>
+<div class="card">
+<div class="card-header"><h3>Product Unit Economics</h3></div>
+<table>
+<thead><tr><th>Product</th><th>Category</th><th>RM Cost</th><th>Labor</th><th>Overhead</th><th>COGS</th><th>Price</th><th>Margin</th><th>Allergens</th><th>Status</th></tr></thead>
+<tbody>
+${DB.products.map(p=>{const cogs=p.rmCost+p.laborCost+p.overhead;const m=margin(p);const col=m>50?'#1d9e75':m>35?'#ba7517':'#e24b4a';return`<tr>
+<td style="font-weight:500">${p.name}</td>
+<td><span class="tag">${p.category}</span></td>
+<td>€${p.rmCost.toFixed(2)}</td>
+<td>€${p.laborCost.toFixed(2)}</td>
+<td>€${p.overhead.toFixed(2)}</td>
+<td>€${cogs.toFixed(2)}</td>
+<td style="font-weight:500">€${p.price.toFixed(2)}</td>
+<td style="color:${col};font-weight:500">${m}%</td>
+<td style="font-size:10px">${p.allergens.join(', ')}</td>
+<td>${statusBadge(p.status)}</td>
+</tr>`}).join('')}
+</tbody>
+</table>
+</div>
+</div>`;
+}
+
+function productionHTML(){
+  return `
+<div class="topbar"><h2><i class="ti ti-tool" style="margin-right:8px"></i>Production Planning</h2><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="showModal('plan')"><i class="ti ti-plus"></i>New Plan</button><button class="btn btn-sm" style="margin-left:8px"><i class="ti ti-file-text"></i>Pick List</button></div></div>
+<div class="content">
+<div class="metrics">
+<div class="metric-card"><div class="label">Total Batches</div><div class="value">${DB.production.length}</div></div>
+<div class="metric-card"><div class="label">Completed</div><div class="value" style="color:#1d9e75">${DB.production.filter(p=>p.status==='completed').length}</div></div>
+<div class="metric-card"><div class="label">In Progress</div><div class="value" style="color:#378add">${DB.production.filter(p=>p.status==='in-progress').length}</div></div>
+<div class="metric-card"><div class="label">Planned</div><div class="value" style="color:#ba7517">${DB.production.filter(p=>p.status==='planned').length}</div></div>
+<div class="metric-card"><div class="label">Units Planned</div><div class="value">${DB.production.reduce((a,p)=>a+p.planned,0)}</div></div>
+<div class="metric-card"><div class="label">Units Produced</div><div class="value">${DB.production.reduce((a,p)=>a+p.actual,0)}</div></div>
+</div>
+<div class="card">
+<div class="card-header"><h3>Production Schedule</h3></div>
+<table>
+<thead><tr><th>Batch #</th><th>Date</th><th>Product</th><th>Planned</th><th>Actual</th><th>Efficiency</th><th>Wastage (kg)</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>
+${DB.production.map(p=>{const eff=p.actual?Math.round(p.actual/p.planned*100):'-';const effCol=p.actual?(eff>=95?'#1d9e75':eff>=80?'#ba7517':'#e24b4a'):'var(--color-text-secondary)';return`<tr>
+<td style="font-family:var(--font-mono);font-size:10px">${p.batch}</td>
+<td style="color:var(--color-text-secondary)">${p.date}</td>
+<td style="font-weight:500">${p.product}</td>
+<td>${p.planned}</td>
+<td>${p.actual||'—'}</td>
+<td style="color:${effCol};font-weight:500">${typeof eff==='number'?eff+'%':eff}</td>
+<td>${p.wastage||'—'}</td>
+<td>${statusBadge(p.status)}</td>
+<td><button class="btn btn-sm" onclick="updateProd(${p.id})"><i class="ti ti-edit"></i></button></td>
+</tr>`}).join('')}
+</tbody>
+</table>
+</div>
+
+<div class="card">
+<div class="card-header"><h3>Material Requirements (Next 2 Days)</h3><span style="font-size:11px;color:var(--color-text-secondary)">Auto-calculated from recipes</span></div>
+<table>
+<thead><tr><th>Material</th><th>Required</th><th>In Stock</th><th>Status</th></tr></thead>
+<tbody>
+${computeMaterialReqs().map(r=>`<tr>
+<td>${r.name}</td>
+<td>${r.required.toFixed(2)} ${r.unit}</td>
+<td>${r.stock} ${r.unit}</td>
+<td>${r.ok?'<span class="badge badge-success">Sufficient</span>':'<span class="badge badge-danger">Insufficient</span>'}</td>
+</tr>`).join('')}
+</tbody>
+</table>
+</div>
+</div>`;
+}
+
+function computeMaterialReqs(){
+  const planned = DB.production.filter(p=>p.status==='planned');
+  const reqs = {};
+  planned.forEach(plan=>{
+    const product = DB.products.find(pr=>pr.id===plan.productId);
+    if(!product) return;
+    const recipe = DB.recipes.find(r=>r.id===product.recipeId);
+    if(!recipe) return;
+    recipe.ingredients.forEach(ing=>{
+      const rm = DB.inventory.find(i=>i.id===ing.rmId);
+      if(!rm) return;
+      if(!reqs[ing.rmId]) reqs[ing.rmId]={name:rm.name,unit:rm.unit,required:0,stock:rm.stock};
+      reqs[ing.rmId].required += ing.qty * plan.planned;
+    });
+  });
+  return Object.values(reqs).map(r=>({...r,ok:r.stock>=r.required}));
+}
+
+function storageHTML(){
+  return `
+<div class="topbar"><h2><i class="ti ti-building-warehouse" style="margin-right:8px"></i>Storage Management</h2></div>
+<div class="content">
+<div class="metrics">
+<div class="metric-card"><div class="label">Total Batches</div><div class="value">${DB.storage.length}</div></div>
+<div class="metric-card"><div class="label">Units Available</div><div class="value" style="color:#1d9e75">${DB.storage.reduce((a,s)=>a+s.available,0)}</div></div>
+<div class="metric-card"><div class="label">Units Reserved</div><div class="value" style="color:#378add">${DB.storage.reduce((a,s)=>a+s.reserved,0)}</div></div>
+<div class="metric-card"><div class="label">Expiring Soon</div><div class="value" style="color:#ba7517">${DB.storage.filter(s=>s.status==='expiring').length}</div></div>
+</div>
+${DB.storage.filter(s=>s.status==='expiring'||s.status==='expired').map(s=>`<div class="alert ${s.status==='expired'?'alert-danger':'alert-warning'}"><i class="ti ti-alert-triangle"></i><span><b>${s.product}</b> batch ${s.batch} — Best before: ${s.bestBefore} — ${s.available} units remaining</span></div>`).join('')}
+<div class="card">
+<div class="card-header"><h3>Finished Goods Inventory (FEFO)</h3></div>
+<table>
+<thead><tr><th>Batch</th><th>Product</th><th>Produced</th><th>Best Before</th><th>Location</th><th>Qty</th><th>Available</th><th>Reserved</th><th>Status</th></tr></thead>
+<tbody>
+${DB.storage.sort((a,b)=>a.bestBefore>b.bestBefore?1:-1).map(s=>`<tr>
+<td style="font-family:var(--font-mono);font-size:10px">${s.batch}</td>
+<td style="font-weight:500">${s.product}</td>
+<td style="color:var(--color-text-secondary)">${s.produced}</td>
+<td style="color:${s.status==='expired'?'#e24b4a':s.status==='expiring'?'#ba7517':'var(--color-text-primary)'};font-weight:${s.status!=='available'?500:400}">${s.bestBefore}</td>
+<td style="font-size:11px">${s.location}</td>
+<td>${s.qty}</td>
+<td>${s.available}</td>
+<td>${s.reserved}</td>
+<td>${statusBadge(s.status)}</td>
+</tr>`).join('')}
+</tbody>
+</table>
+</div>
+</div>`;
+}
+
+function showModal(type){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modal-overlay';
+  let content = '';
+  if(type==='stock-in'){
+    content=`<div class="modal-header"><h3>Stock In — Receive Materials</h3><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+<div class="modal-body">
+<div class="form-group"><label>Material</label><select><option>All-Purpose Flour</option><option>Granulated Sugar</option><option>Unsalted Butter</option><option>Fresh Eggs</option><option>Heavy Cream</option></select></div>
+<div class="form-group"><label>Quantity</label><input type="number" placeholder="Enter quantity" /></div>
+<div class="form-group"><label>Batch Number</label><input type="text" placeholder="e.g. BT2025-02" /></div>
+<div class="form-group"><label>Expiry Date</label><input type="date" /></div>
+<div class="form-group"><label>Supplier</label><input type="text" placeholder="Supplier name" /></div>
+<div class="form-group"><label>Storage Location</label><input type="text" placeholder="e.g. Rack A1" /></div>
+</div>
+<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="closeModal()"><i class="ti ti-check"></i>Confirm Receipt</button></div>`;
+  } else if(type==='plan'){
+    content=`<div class="modal-header"><h3>New Production Plan</h3><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+<div class="modal-body">
+<div class="form-group"><label>Product</label><select>${DB.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select></div>
+<div class="form-group"><label>Production Date</label><input type="date" /></div>
+<div class="form-group"><label>Planned Quantity</label><input type="number" placeholder="Number of units" /></div>
+<div class="form-group"><label>Batch Number</label><input type="text" placeholder="Auto-generated if blank" /></div>
+</div>
+<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="closeModal()"><i class="ti ti-check"></i>Schedule Production</button></div>`;
+  } else if(type==='wastage'){
+    content=`<div class="modal-header"><h3>Record Wastage / Spoilage</h3><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+<div class="modal-body">
+<div class="form-group"><label>Material</label><select>${DB.inventory.map(i=>`<option>${i.name}</option>`).join('')}</select></div>
+<div class="form-group"><label>Quantity Lost</label><input type="number" placeholder="Amount" /></div>
+<div class="form-group"><label>Reason</label><select><option>Expired</option><option>Contamination</option><option>Spillage</option><option>Quality Fail</option><option>Other</option></select></div>
+<div class="form-group"><label>Notes</label><textarea rows="2" placeholder="Additional details"></textarea></div>
+</div>
+<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="closeModal()"><i class="ti ti-check"></i>Record</button></div>`;
+  } else if(type==='recipe'){
+    content=`<div class="modal-header"><h3>New Recipe</h3><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+<div class="modal-body">
+<div class="form-group"><label>Recipe Name</label><input type="text" placeholder="e.g. Lemon Drizzle" /></div>
+<div class="form-group"><label>Category</label><select><option>Base</option><option>Premium</option><option>Specialty</option><option>Decoration</option></select></div>
+<div class="form-group"><label>Yield Unit</label><input type="text" placeholder="e.g. 8&quot; cake" /></div>
+<div class="form-group"><label>Version</label><input type="text" value="v1.0" /></div>
+</div>
+<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="closeModal()"><i class="ti ti-check"></i>Create Recipe</button></div>`;
+  } else if(type==='product'){
+    content=`<div class="modal-header"><h3>New Product</h3><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+<div class="modal-body">
+<div class="form-group"><label>Product Name</label><input type="text" placeholder="e.g. Lemon Birthday Cake" /></div>
+<div class="form-group"><label>Category</label><select><option>Birthday</option><option>Wedding</option><option>Specialty</option><option>Custom</option></select></div>
+<div class="form-group"><label>Base Recipe</label><select>${DB.recipes.map(r=>`<option value="${r.id}">${r.name}</option>`).join('')}</select></div>
+<div class="form-group"><label>Labor Cost (€)</label><input type="number" placeholder="0.00" /></div>
+<div class="form-group"><label>Overhead (€)</label><input type="number" placeholder="0.00" /></div>
+<div class="form-group"><label>Selling Price (€)</label><input type="number" placeholder="0.00" /></div>
+</div>
+<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="closeModal()"><i class="ti ti-check"></i>Create Product</button></div>`;
+  }
+  overlay.innerHTML = `<div class="modal">${content}</div>`;
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal();});
+  document.body.appendChild(overlay);
+}
+
+function closeModal(){
+  const o=document.getElementById('modal-overlay');
+  if(o) o.remove();
+}
+
+function updateProd(id){
+  const p = DB.production.find(x=>x.id===id);
+  if(!p) return;
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='modal-overlay';
+  overlay.innerHTML=`<div class="modal">
+<div class="modal-header"><h3>Update Production — ${p.batch}</h3><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+<div class="modal-body">
+<div class="stat-row"><span>Product</span><span style="font-weight:500">${p.product}</span></div>
+<div class="stat-row"><span>Planned</span><span>${p.planned} units</span></div>
+<div class="form-group" style="margin-top:14px"><label>Actual Output</label><input type="number" id="actual-input" value="${p.actual||''}" placeholder="Units produced" /></div>
+<div class="form-group"><label>Wastage (kg)</label><input type="number" id="wastage-input" value="${p.wastage||0}" placeholder="0.0" /></div>
+<div class="form-group"><label>Status</label><select id="status-input"><option ${p.status==='planned'?'selected':''}>planned</option><option ${p.status==='in-progress'?'selected':''}>in-progress</option><option ${p.status==='completed'?'selected':''}>completed</option></select></div>
+</div>
+<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveProd(${id})"><i class="ti ti-check"></i>Save</button></div>
+</div>`;
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal();});
+  document.body.appendChild(overlay);
+}
+
+function saveProd(id){
+  const p = DB.production.find(x=>x.id===id);
+  const actual = parseFloat(document.getElementById('actual-input').value)||0;
+  const wastage = parseFloat(document.getElementById('wastage-input').value)||0;
+  const status = document.getElementById('status-input').value;
+  p.actual=actual; p.wastage=wastage; p.status=status;
+  closeModal();
+  render('production');
+}
+
+function bindCharts(page){
+  if(page!=='dashboard') return;
+  setTimeout(()=>{
+    if(window.Chart){
+      const cogsCtx = document.getElementById('cogsChart');
+      if(cogsCtx && !cogsCtx._chartInstance){
+        cogsCtx._chartInstance = new Chart(cogsCtx,{type:'doughnut',data:{labels:['Raw Materials','Labor','Overhead'],datasets:[{data:[52,30,18],backgroundColor:['#3266ad','#1d9e75','#ba7517'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+      }
+      const trendCtx = document.getElementById('trendChart');
+      if(trendCtx && !trendCtx._chartInstance){
+        trendCtx._chartInstance = new Chart(trendCtx,{type:'bar',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Units Produced',data:[18,22,15,28,24,32,19],backgroundColor:'#3266ad',borderRadius:4},{label:'Planned',data:[20,20,20,30,25,30,20],backgroundColor:'rgba(50,102,173,0.2)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(128,128,128,0.1)'}}}}});
+      }
+    }
+  },100);
+}
+
+const script = document.createElement('script');
+script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+script.onload = ()=>{ if(currentPage==='dashboard') bindCharts('dashboard'); };
+document.head.appendChild(script);
+
+render('dashboard');
+</script>
