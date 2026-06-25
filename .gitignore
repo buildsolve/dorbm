@@ -6,8 +6,11 @@ build/
 .env.local
 *.db
 *.db-journal
+*.tsbuildinfo
+.claude/settings.local.json
 backend/backend.log
 backend/backend.err
 *.log
 .DS_Store
 Thumbs.db
+export.json

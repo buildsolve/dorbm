@@ -4,7 +4,10 @@
   "description": "Cake ERP Backend - NestJS",
   "scripts": {
     "build": "nest build",
+    "build:frontend": "node scripts/copy-frontend.js",
+    "build:full": "npm run build:frontend && prisma generate && npm run build",
     "start": "node dist/main",
+    "start:prod": "prisma migrate deploy && node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
@@ -24,6 +27,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.3.0",
+    "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7.3.0",
     "@nestjs/throttler": "^5.1.1",
     "@prisma/client": "^5.10.0",
