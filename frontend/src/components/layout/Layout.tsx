@@ -78,7 +78,7 @@ export default function Layout() {
         </button>
         <div className="flex items-center gap-2">
           <Cake className="w-7 h-7" style={{ color: '#FF385C' }} />
-          <span className="font-extrabold text-lg tracking-tight" style={{ color: '#FF385C' }}>cakeerp</span>
+          <span className="font-extrabold text-lg tracking-tight" style={{ color: '#FF385C' }}>DOR</span>
           <span className="text-[#6A6A6A] text-xs ml-2 hidden sm:inline">Production Management</span>
         </div>
         <div className="ml-auto flex items-center gap-3">

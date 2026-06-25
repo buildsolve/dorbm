@@ -34,14 +34,14 @@ export default function LoginPage() {
       >
         <div className="flex items-center gap-3">
           <Cake className="w-7 h-7 text-white" />
-          <span className="text-white font-semibold text-lg tracking-wide">CakeERP</span>
+          <span className="text-white font-semibold text-lg tracking-wide">DOR</span>
         </div>
         <div>
           <p className="text-white/50 text-xs uppercase tracking-widest mb-2">Module</p>
           <h2 className="text-white text-2xl font-light leading-snug">Production<br />Management</h2>
           <p className="text-white/50 text-xs mt-4">Ingredients · Recipes · Planning · Storage</p>
         </div>
-        <p className="text-white/30 text-xs">© {new Date().getFullYear()} CakeERP</p>
+        <p className="text-white/30 text-xs">© {new Date().getFullYear()} DOR</p>
       </div>
 
       {/* Right login form */}
@@ -49,7 +49,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-8">
             <Cake className="w-6 h-6 text-[#FF385C]" />
-            <span className="font-semibold text-[#32363A]">CakeERP</span>
+            <span className="font-semibold text-[#32363A]">DOR</span>
           </div>
 
           <h1 className="text-xl font-semibold text-[#32363A] mb-1">Sign In</h1>
