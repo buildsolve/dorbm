@@ -9,12 +9,22 @@
 #   4. Deploys directly to Railway via CLI (bypasses GitHub auto-deploy,
 #      which has been unreliable for this project)
 
-$ErrorActionPreference = "Stop"
+# Note: deliberately NOT using $ErrorActionPreference = "Stop" — native tools (npm, vite)
+# write harmless warnings to stderr, which PowerShell would otherwise treat as fatal.
+# We check $LASTEXITCODE explicitly after each step instead.
 $env:PATH = "C:\Users\User\nodejs-portable\node-v20.11.1-win-x64;" + $env:PATH
+
+function Assert-Success($step) {
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "==> FAILED at: $step (exit code $LASTEXITCODE)" -ForegroundColor Red
+        exit 1
+    }
+}
 
 Write-Host "==> Building frontend and copying into backend/public..." -ForegroundColor Cyan
 Set-Location "$PSScriptRoot\backend"
 npm run build:full
+Assert-Success "frontend build"
 
 Write-Host "==> Committing build artifacts..." -ForegroundColor Cyan
 Set-Location $PSScriptRoot
@@ -29,8 +39,10 @@ if ($changes) {
 
 Write-Host "==> Pushing to GitHub..." -ForegroundColor Cyan
 git push origin master
+Assert-Success "git push"
 
 Write-Host "==> Deploying to Railway..." -ForegroundColor Cyan
 railway up -c
+Assert-Success "railway up"
 
 Write-Host "==> Done. Live at https://dorbm-production.up.railway.app" -ForegroundColor Green
