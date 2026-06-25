@@ -80,6 +80,7 @@ export class DashboardService {
   async getTopProducts() {
     const products = await this.prisma.product.findMany({
       where: { isActive: true },
+      relationLoadStrategy: 'join',
       include: {
         recipe: {
           include: {
@@ -340,6 +341,7 @@ export class DashboardService {
     let [weekTasks, overdueTasks, locations, records] = await Promise.all([
       this.prisma.weeklyTask.findMany({
         where: { weeklyPlan: { weekStart: { gte: monday, lte: sunday } } },
+        relationLoadStrategy: 'join',
         include: taskInclude,
       }),
       this.prisma.weeklyTask.count({
@@ -367,6 +369,7 @@ export class DashboardService {
       if (nextPlan) {
         weekTasks = await this.prisma.weeklyTask.findMany({
           where: { weeklyPlanId: nextPlan.id },
+          relationLoadStrategy: 'join',
           include: taskInclude,
         });
         weekLabel = `KW ${nextPlan.weekNumber}`;
@@ -502,6 +505,7 @@ export class DashboardService {
 
     const tasks = await this.prisma.weeklyTask.findMany({
       where: { status: { notIn: ['CANCELLED'] }, weeklyPlan: { weekStart: weekFilter } },
+      relationLoadStrategy: 'join',
       include: {
         weeklyPlan: { select: { weekNumber: true } },
         product: {
@@ -527,15 +531,24 @@ export class DashboardService {
     const byWeek = new Map<number, WeekRow>();
     const revenueByProduct = new Map<string, { name: string; revenue: number; units: number }>();
     let labourMinutes = 0, bakingMinutes = 0, materialCost = 0, revenue = 0, otherCost = 0;
+    let customOrderCount = 0, customOrderRevenue = 0;
 
     for (const t of tasks) {
       const kw = t.weeklyPlan.weekNumber;
       const row = byWeek.get(kw) ?? { week: `KW ${kw}`, kw, revenue: 0, labourCost: 0, energyCost: 0, materialCost: 0, otherCost: 0 };
       const qty = Number(t.quantity);
       const price = Number(t.product?.sellingPrice ?? 0);
-      const taskRevenue = qty * price;
+      // Custom/individual orders carry their own agreed price; standard catalog tasks use qty × sellingPrice.
+      // Using one formula here means custom orders automatically flow into every revenue-derived
+      // metric below (totals, weekly breakdown, top products) with no separate code path.
+      const customPrice = (t as any).customPrice;
+      const taskRevenue = customPrice != null ? Number(customPrice) : qty * price;
       const taskLabourCost = (Number(t.estimatedMinutes) / 60) * blendedRate;
-      const taskCash = Number((t as any).cashAmount ?? 0);
+
+      if ((t as any).isCustomOrder) {
+        customOrderCount += 1;
+        customOrderRevenue += taskRevenue;
+      }
 
       let taskMaterial = 0, taskEnergy = 0;
       const r = t.product?.recipe;
@@ -622,6 +635,11 @@ export class DashboardService {
         grossMarginPct: revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0,
         unitsPlanned: Math.round(tasks.reduce((s, t) => s + Number(t.quantity), 0)),
         revenuePerLabourHour: labourMinutes > 0 ? r2(revenue / (labourMinutes / 60)) : 0,
+      },
+      customOrders: {
+        count: customOrderCount,
+        revenue: r2(customOrderRevenue),
+        revenueSharePct: revenue > 0 ? Math.round((customOrderRevenue / revenue) * 1000) / 10 : 0,
       },
       weeks,
       topProducts: [...revenueByProduct.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 6)
@@ -808,16 +826,22 @@ export class DashboardService {
       .sort((a, b) => b.value - a.value);
 
     // Incoming pipeline grouped by product
+    // (uses customPrice when set, same override rule as the revenue calc above —
+    // a custom order's actual agreed price, not the catalog sellingPrice)
     const incomingMap = new Map<string, {
-      productId: string; name: string; sellingPrice: number; quantity: number; weeks: Set<string>;
+      productId: string; name: string; quantity: number; value: number; weeks: Set<string>;
     }>();
     for (const t of tasks) {
       if (!t.product) continue;
+      const taskValue = (t as any).customPrice != null
+        ? Number((t as any).customPrice)
+        : Number(t.quantity) * Number(t.product.sellingPrice);
       const row = incomingMap.get(t.product.id) ?? {
-        productId: t.product.id, name: t.product.name, sellingPrice: Number(t.product.sellingPrice),
-        quantity: 0, weeks: new Set<string>(),
+        productId: t.product.id, name: t.product.name,
+        quantity: 0, value: 0, weeks: new Set<string>(),
       };
       row.quantity += Number(t.quantity);
+      row.value += taskValue;
       row.weeks.add(`KW ${t.weeklyPlan.weekNumber}`);
       incomingMap.set(t.product.id, row);
     }
@@ -825,7 +849,7 @@ export class DashboardService {
       .map(r => ({
         productId: r.productId, name: r.name,
         quantity: Math.round(r.quantity * 100) / 100,
-        value: Math.round(r.quantity * r.sellingPrice * 100) / 100,
+        value: Math.round(r.value * 100) / 100,
         weeks: [...r.weeks].sort(),
       }))
       .sort((a, b) => b.value - a.value);
@@ -836,8 +860,11 @@ export class DashboardService {
       if (!t.product) continue;
       const wk = t.weeklyPlan.weekNumber;
       const row = byWeekMap.get(wk) ?? { week: `KW ${wk}`, units: 0, value: 0 };
+      const taskValue = (t as any).customPrice != null
+        ? Number((t as any).customPrice)
+        : Number(t.quantity) * Number(t.product.sellingPrice);
       row.units += Number(t.quantity);
-      row.value += Number(t.quantity) * Number(t.product.sellingPrice);
+      row.value += taskValue;
       byWeekMap.set(wk, row);
     }
     const byWeek = [...byWeekMap.entries()]
@@ -923,6 +950,7 @@ export class DashboardService {
 
     const plans = await this.prisma.weeklyPlan.findMany({
       where: { year },
+      relationLoadStrategy: 'join',
       include: {
         tasks: {
           where: { taskType: 'PRODUCTION' },
@@ -939,8 +967,10 @@ export class DashboardService {
       const plan = planByKw.get(kw);
       let actual: number | null = null;
       if (plan && plan.tasks.length > 0) {
-        actual = r2(plan.tasks.reduce((sum, t) =>
-          sum + Number(t.quantity) * Number(t.product?.sellingPrice ?? 0), 0));
+        actual = r2(plan.tasks.reduce((sum, t) => {
+          const customPrice = (t as any).customPrice;
+          return sum + (customPrice != null ? Number(customPrice) : Number(t.quantity) * Number(t.product?.sellingPrice ?? 0));
+        }, 0));
       }
       weeks.push({
         kw,

@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -325,6 +326,13 @@ model WeeklyTask {
   completedAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  // Individual / custom cake orders (e.g. "You are Special" style configurable cakes).
+  // Still resolve to a base productId/recipe above for ingredient + labour planning —
+  // only price and customer info differ from a standard catalog task.
+  isCustomOrder    Boolean   @default(false)
+  customerName     String?
+  customPrice      Float?    // total price for this order; null = use product.sellingPrice * quantity
 
   weeklyPlan     WeeklyPlan     @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
   product        Product?       @relation(fields: [productId], references: [id])

@@ -177,6 +177,7 @@ export default function DashboardPage() {
         // Build sentence
         const sentences: string[] = [];
         if (rev > 0) sentences.push(`Der Planungszeitraum ${range} zeigt einen erwarteten Umsatz von ${formatCurrency(rev)} bei einer Bruttomarge von ${margin}%.`);
+        if ((outlook?.customOrders?.count ?? 0) > 0) sentences.push(`Davon ${outlook.customOrders.count} individuelle Bestellung${outlook.customOrders.count > 1 ? 'en' : ''} (${formatCurrency(outlook.customOrders.revenue)}, ${outlook.customOrders.revenueSharePct}% vom Umsatz).`);
         if (utilPct != null) sentences.push(`Die Kapazitätsauslastung liegt bei ${utilPct}% (${labourHours} von ${availHours} h bezahlter Arbeitszeit verplant).`);
         if (!profitOk) sentences.push('Achtung: Der geplante Rohgewinn ist negativ — Kosten übersteigen den erwarteten Umsatz.');
         if (utilPct != null && utilPct < 40) sentences.push('Die Auslastung ist niedrig — mehr Produktion einplanen, um Fixkosten zu decken.');
@@ -731,6 +732,7 @@ export default function DashboardPage() {
 
             const sentences: string[] = [];
             if (units > 0) sentences.push(`Im Zeitraum ${weekLabel} sind ${units} Stück über ${labH.toFixed(1)} Arbeitsstunden geplant${uph ? ` (Durchsatz ${uph} Stk/h)` : ''}.`);
+            if ((opsOutlook?.customOrders?.count ?? 0) > 0) sentences.push(`Darunter ${opsOutlook.customOrders.count} individuelle Bestellung${opsOutlook.customOrders.count > 1 ? 'en' : ''} (${opsOutlook.customOrders.revenueSharePct}% vom Umsatz).`);
             if (capPct != null) sentences.push(`Die Kapazitätsauslastung liegt bei ${capPct}%, die Ofenauslastung bei ${ovenUtil ?? '—'}%.`);
             if (storagePct != null) sentences.push(`Das Lager ist zu ${storagePct}% belegt.`);
             if (warnings.length > 0) sentences.push('Achtung: ' + warnings.join(', ') + '.');
@@ -1010,13 +1012,16 @@ export default function DashboardPage() {
                         subtitle={`Rohgewinn gesamt ${formatCurrency(gp)} · ${opsOutlook?.totals?.grossMarginPct ?? 0}% Marge`}
                         icon={<PiggyBank className="w-6 h-6" />} color={(gp >= 0) ? 'green' : 'red'} />
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       <StatCard title="Energiekosten/Stk" value={energyUnit === '—' ? '—' : `€${energyUnit}`}
                         subtitle={`Variable Ofenenergie ${formatCurrency(energyCost)}`}
                         icon={<Flame className="w-6 h-6" />} color="orange" />
                       <StatCard title="Umsatz/Arbeitsstunde" value={revenuePerH === '—' ? '—' : `€${revenuePerH}`}
                         subtitle={`Umsatz ${formatCurrency(revenue)} / ${labH.toFixed(1)} h Arbeit`}
                         icon={<TrendingUp className="w-6 h-6" />} color="green" />
+                      <StatCard title="Individuelle Bestellungen" value={`${opsOutlook?.customOrders?.count ?? 0}`}
+                        subtitle={`${formatCurrency(opsOutlook?.customOrders?.revenue ?? 0)} · ${opsOutlook?.customOrders?.revenueSharePct ?? 0}% vom Umsatz`}
+                        icon={<Award className="w-6 h-6" />} color="purple" />
                       <div className="card flex flex-col gap-1">
                         <span className="text-xs font-semibold text-[#6A6D70] uppercase tracking-wide">Overhead-Allocation/Stk</span>
                         <div className="mt-1">{NA}</div>

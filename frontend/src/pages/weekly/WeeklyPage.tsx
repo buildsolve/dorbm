@@ -144,15 +144,16 @@ function TaskCard({ task, onUpdate, onDelete }: { task: any; onUpdate: (data: an
   const [editing, setEditing] = useState(false);
   const [assignedTo, setAssignedTo] = useState(task.assignedTo ?? '');
   const isMisc = task.taskType === 'MISC';
+  const isCustomOrder = Boolean(task.isCustomOrder);
   const stage = task.recipeStage;
   const ss = stageStyle(stage?.stageType ?? 'PREP');
   const nextStatus = { PLANNED: 'IN_PROGRESS', IN_PROGRESS: 'DONE', DONE: 'PLANNED' }[task.status as string] ?? 'PLANNED';
-  const borderColor = isMisc ? '#E76500' : ss.color;
+  const borderColor = isMisc ? '#E76500' : isCustomOrder ? '#5A18A0' : ss.color;
 
   return (
     <div
       className="group relative mb-2 p-2.5 cursor-default"
-      style={{ background: isMisc ? '#FFFBF5' : '#fff', border: '1px solid #D9D9D9', borderLeft: `3px solid ${borderColor}` }}
+      style={{ background: isMisc ? '#FFFBF5' : isCustomOrder ? '#FAF7FF' : '#fff', border: '1px solid #D9D9D9', borderLeft: `3px solid ${borderColor}` }}
     >
       {/* Status + delete */}
       <div className="flex items-start justify-between gap-1 mb-1">
@@ -174,12 +175,20 @@ function TaskCard({ task, onUpdate, onDelete }: { task: any; onUpdate: (data: an
             </>
           ) : (
             <>
+              {isCustomOrder && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide mb-0.5" style={{ color: '#5A18A0' }}>
+                  ★ Individuell{task.customerName ? ` · ${task.customerName}` : ''}
+                </span>
+              )}
               <p className="text-xs font-semibold text-[#32363A] leading-tight truncate">{task.product?.name}</p>
               {stage && (
                 <span className="inline-block text-[10px] px-1.5 py-0.5 mt-0.5 font-medium"
                       style={{ background: ss.bg, color: ss.color }}>
                   {stage.name}
                 </span>
+              )}
+              {isCustomOrder && task.notes && (
+                <p className="text-[10px] text-[#6A6D70] mt-0.5 truncate" title={task.notes}>{task.notes}</p>
               )}
             </>
           )}
@@ -197,6 +206,11 @@ function TaskCard({ task, onUpdate, onDelete }: { task: any; onUpdate: (data: an
           </span>
         )}
         {!isMisc && <span className="text-[10px] text-[#6A6D70]">× {task.quantity}</span>}
+        {isCustomOrder && task.customPrice != null && (
+          <span className="flex items-center gap-0.5 text-[10px] font-medium" style={{ color: '#5A18A0' }}>
+            <Euro className="w-2.5 h-2.5" />{Number(task.customPrice).toFixed(2)}
+          </span>
+        )}
         {task.assignedTo && (
           <span className="flex items-center gap-0.5 text-[10px]" style={{ color: '#E31C5F' }}>
             <User className="w-2.5 h-2.5" />{task.assignedTo}
@@ -348,9 +362,13 @@ function GenerateModal({ planId, products, onClose, onDone }: any) {
 // ─── ADD TASK MODAL ───────────────────────────────────────────────────────────
 
 function AddTaskModal({ planId, products, defaultDay, onClose, onDone }: any) {
-  const { register, handleSubmit, watch, setValue } = useForm({ defaultValues: { productId: '', recipeStageId: '', plannedDay: defaultDay ?? 'MON', quantity: 1, assignedTo: '', estimatedMinutes: 0, notes: '' } });
+  const { register, handleSubmit, watch, setValue } = useForm({ defaultValues: {
+    productId: '', recipeStageId: '', plannedDay: defaultDay ?? 'MON', quantity: 1, assignedTo: '', estimatedMinutes: 0, notes: '',
+    isCustomOrder: false, customerName: '', customPrice: '',
+  } });
   const selectedProductId = watch('productId');
   const selectedStageId   = watch('recipeStageId');
+  const isCustomOrder      = watch('isCustomOrder');
   const { data: stages = [] } = useQuery({
     queryKey: ['recipe-stages-for', selectedProductId],
     queryFn: () => selectedProductId
@@ -376,7 +394,12 @@ function AddTaskModal({ planId, products, defaultDay, onClose, onDone }: any) {
   const onSubmit = async (data: any) => {
     setSaving(true);
     try {
-      await weeklyApi.plans.addTask(planId, { ...data, recipeStageId: data.recipeStageId || null });
+      await weeklyApi.plans.addTask(planId, {
+        ...data,
+        recipeStageId: data.recipeStageId || null,
+        customPrice: data.isCustomOrder && data.customPrice !== '' ? Number(data.customPrice) : null,
+        customerName: data.isCustomOrder ? (data.customerName || null) : null,
+      });
       toast.success('Task hinzugefügt');
       onDone();
     } catch (e: any) { toast.error(e.response?.data?.message || 'Fehler'); }
@@ -385,13 +408,21 @@ function AddTaskModal({ planId, products, defaultDay, onClose, onDone }: any) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <label className="flex items-center gap-2 p-2.5 rounded-xl cursor-pointer" style={{ background: isCustomOrder ? '#F0E8FF' : '#F7F7F7' }}>
+        <input type="checkbox" {...register('isCustomOrder')} className="w-4 h-4" />
+        <span className="text-sm font-medium" style={{ color: isCustomOrder ? '#5A18A0' : '#222222' }}>
+          Individuelle Bestellung (Kunden-Sonderwunsch)
+        </span>
+      </label>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label">Produkt *</label>
+          <label className="label">Basis-Produkt *</label>
           <select {...register('productId', { required: true })} className="input">
             <option value="">Produkt wählen…</option>
             {products.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+          {isCustomOrder && <p className="text-[11px] text-[#6A6A6A] mt-1">Nächstliegendes Rezept — für Zutaten- &amp; Zeitplanung</p>}
         </div>
         <div>
           <label className="label">Arbeitsstufe</label>
@@ -401,6 +432,21 @@ function AddTaskModal({ planId, products, defaultDay, onClose, onDone }: any) {
           </select>
         </div>
       </div>
+
+      {isCustomOrder && (
+        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl" style={{ background: '#FAF7FF', border: '1px solid #E8D9FF' }}>
+          <div>
+            <label className="label">Kundenname</label>
+            <input {...register('customerName')} className="input" placeholder="z.B. Familie Müller" />
+          </div>
+          <div>
+            <label className="label">Vereinbarter Preis (€, gesamt)</label>
+            <input {...register('customPrice')} type="number" min={0} step="0.01" className="input" placeholder="z.B. 75.00" />
+            <p className="text-[11px] text-[#6A6A6A] mt-1">Leer = Katalogpreis × Menge wird verwendet</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="label">Tag</label>
@@ -409,7 +455,7 @@ function AddTaskModal({ planId, products, defaultDay, onClose, onDone }: any) {
           </select>
         </div>
         <div>
-          <label className="label">Menge</label>
+          <label className="label">Menge {isCustomOrder && <span className="text-[#6A6A6A]">(Rezept-Einheiten)</span>}</label>
           <input {...register('quantity', { valueAsNumber: true })} type="number" min={1} className="input" />
         </div>
         <div>
@@ -422,8 +468,8 @@ function AddTaskModal({ planId, products, defaultDay, onClose, onDone }: any) {
         <input {...register('assignedTo')} className="input" placeholder="z.B. Klaus" />
       </div>
       <div>
-        <label className="label">Notiz</label>
-        <input {...register('notes')} className="input" />
+        <label className="label">{isCustomOrder ? 'Anpassungswünsche (Größe, Geschmack, Deko, …)' : 'Notiz'}</label>
+        <input {...register('notes')} className="input" placeholder={isCustomOrder ? 'z.B. 15 Personen, Vanille-Erdbeer, weiße Deko' : ''} />
       </div>
       <div className="flex gap-3 justify-end pt-3 border-t border-[#EDEFF0]">
         <button type="button" onClick={onClose} className="btn-ghost">Abbrechen</button>
