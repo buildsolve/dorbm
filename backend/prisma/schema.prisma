@@ -69,6 +69,7 @@ model Ingredient {
   unitCost        Float    @default(0)
   reorderLevel    Float    @default(0)
   currentStock    Float    @default(0)
+  category        String?
   storageLocation String?
   allergenInfo    String?
   supplierId      String?

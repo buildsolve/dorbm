@@ -26,14 +26,34 @@ export class IngredientsService {
   }
 
   async create(dto: any) {
-    const exists = await this.prisma.ingredient.findUnique({ where: { code: dto.code } });
+    // Auto-generate a code if the client didn't provide one
+    const code = dto.code?.trim() || `ING-${Date.now()}`;
+    const exists = await this.prisma.ingredient.findUnique({ where: { code } });
     if (exists) throw new ConflictException('Ingredient code already exists');
-    return this.prisma.ingredient.create({ data: dto, include: { supplier: true } });
+    return this.prisma.ingredient.create({
+      data: { ...this.coerce(dto), code },
+      include: { supplier: true },
+    });
   }
 
   async update(id: string, dto: any) {
     await this.findOne(id);
-    return this.prisma.ingredient.update({ where: { id }, data: dto, include: { supplier: true } });
+    // Strip read-only/relational fields that Prisma rejects on update
+    const { id: _id, createdAt, updatedAt, supplier, stockTransactions, recipeComponents, ...rest } = dto;
+    return this.prisma.ingredient.update({
+      where: { id },
+      data: this.coerce(rest),
+      include: { supplier: true },
+    });
+  }
+
+  private coerce(dto: any) {
+    const out = { ...dto };
+    if (out.unitCost !== undefined) out.unitCost = Number(out.unitCost);
+    if (out.reorderLevel !== undefined) out.reorderLevel = Number(out.reorderLevel);
+    if (out.currentStock !== undefined) out.currentStock = Number(out.currentStock);
+    if (out.supplierId === '' || out.supplierId === null) out.supplierId = null;
+    return out;
   }
 
   async remove(id: string) {
