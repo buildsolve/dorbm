@@ -221,3 +221,18 @@ export const equipmentClientApi = {
 export const buildingCostClientApi = {
   list: () => api.get('/building-cost').then(r => r.data),
 };
+
+// --- Cash Control (Kassenführung) ---
+export const cashControlApi = {
+  getByDate: (date: string) => api.get('/cash-control/counts/by-date', { params: { date } }),
+  createOrGet: (data: { businessDate: string; employeeId: string }) => api.post('/cash-control/counts', data),
+  patch: (id: string, data: any) => api.patch(`/cash-control/counts/${id}`, data),
+  addWithdrawal: (id: string, data: { amount: number; purpose: string }) => api.post(`/cash-control/counts/${id}/withdrawals`, data),
+  removeWithdrawal: (id: string, withdrawalId: string) => api.delete(`/cash-control/counts/${id}/withdrawals/${withdrawalId}`),
+  sign: (id: string, signatureImage: string) => api.post(`/cash-control/counts/${id}/sign`, { signatureImage }),
+  list: (params?: { from?: string; to?: string; status?: string }) => api.get('/cash-control/counts', { params }),
+  getById: (id: string) => api.get(`/cash-control/counts/${id}`),
+  summary: (params?: { from?: string; to?: string }) => api.get('/cash-control/counts/summary', { params }),
+  getSettings: () => api.get('/cash-control/settings'),
+  updateSettings: (data: any) => api.patch('/cash-control/settings', data),
+};

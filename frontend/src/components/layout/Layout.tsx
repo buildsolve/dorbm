@@ -2,12 +2,13 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
   LayoutDashboard, Package, BookOpen, ShoppingBag, Factory, Warehouse,
-  ChevronDown, ChevronRight, LogOut, Menu, Cake, TrendingUp, Users, Settings2, ScrollText
+  ChevronDown, ChevronRight, LogOut, Menu, Cake, TrendingUp, Users, Settings2, ScrollText, Wallet
 } from 'lucide-react';
 import { getStoredUser, clearAuth } from '../../hooks/useAuth';
 import clsx from 'clsx';
 
-const nav = [
+function buildNav(role?: string) {
+  return [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
   {
     label: 'Inventory', icon: Package, children: [
@@ -43,18 +44,29 @@ const nav = [
   { label: 'ESSO', icon: TrendingUp, to: '/esso' },
   { label: 'Business Journal', icon: ScrollText, to: '/journal' },
   {
+    label: 'Kassenführung', icon: Wallet, children: [
+      { label: 'Kassensturz', to: '/cash-control' },
+      ...(role === 'ADMIN' ? [
+        { label: 'Dashboard', to: '/cash-control/dashboard' },
+        { label: 'Einstellungen', to: '/cash-control/settings' },
+      ] : []),
+    ],
+  },
+  {
     label: 'Stammdaten', icon: Settings2, children: [
       { label: 'Team', to: '/team' },
       { label: 'Ausstattung', to: '/stammdaten' },
       { label: 'Lagerorte', to: '/storage/locations' },
     ],
   },
-];
+  ];
+}
 
 export default function Layout() {
   const [open, setOpen] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const user = getStoredUser();
+  const nav = buildNav(user?.role);
   const navigate = useNavigate();
 
   const toggle = (label: string) =>

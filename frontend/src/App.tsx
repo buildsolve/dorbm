@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { isAuthenticated } from './hooks/useAuth';
+import { isAuthenticated, getStoredUser } from './hooks/useAuth';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
@@ -21,9 +21,16 @@ import WeeklyPage from './pages/weekly/WeeklyPage';
 import TeamPage from './pages/team/TeamPage';
 import StammdatenPage from './pages/stammdaten/StammdatenPage';
 import BusinessJournalPage from './pages/journal/BusinessJournalPage';
+import CashCountEntry from './pages/cash-control/CashCountEntry';
+import CashControlDashboard from './pages/cash-control/CashControlDashboard';
+import CashControlSettingsPage from './pages/cash-control/CashControlSettingsPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   return isAuthenticated() ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function RequireRole({ role, children }: { role: string; children: React.ReactNode }) {
+  return getStoredUser()?.role === role ? <>{children}</> : <Navigate to="/cash-control" replace />;
 }
 
 export default function App() {
@@ -52,6 +59,9 @@ export default function App() {
           <Route path="team" element={<TeamPage />} />
           <Route path="stammdaten" element={<StammdatenPage />} />
           <Route path="journal" element={<BusinessJournalPage />} />
+          <Route path="cash-control" element={<CashCountEntry />} />
+          <Route path="cash-control/dashboard" element={<RequireRole role="ADMIN"><CashControlDashboard /></RequireRole>} />
+          <Route path="cash-control/settings" element={<RequireRole role="ADMIN"><CashControlSettingsPage /></RequireRole>} />
         </Route>
       </Routes>
     </BrowserRouter>

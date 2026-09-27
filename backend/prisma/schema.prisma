@@ -37,6 +37,8 @@ model Employee {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  cashCounts CashCount[]
+
   @@map("employees")
 }
 
@@ -526,4 +528,70 @@ model BuildingCost {
   updatedAt   DateTime @updatedAt
 
   @@map("building_costs")
+}
+
+// ==================== CASH CONTROLLING (KASSENFUEHRUNG) ====================
+
+model CashCount {
+  id               String    @id @default(uuid())
+  businessDate     DateTime  @unique
+  employeeId       String
+  employee         Employee  @relation(fields: [employeeId], references: [id])
+
+  openingBalance   Float     @default(0)
+  posCashSales     Float     @default(0)
+  withdrawalsTotal Float     @default(0)
+  expectedAmount   Float     @default(0)
+  countedAmount    Float     @default(0)
+  difference       Float     @default(0)
+
+  reason           String?
+  signatureImage   String?
+  signedAt         DateTime?
+  status           String    @default("DRAFT") // DRAFT | SUBMITTED
+  createdByUserId  String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  denominationCounts DenominationCount[]
+  withdrawals        CashWithdrawal[]
+
+  @@map("cash_counts")
+}
+
+model DenominationCount {
+  id           String    @id @default(uuid())
+  cashCountId  String
+  cashCount    CashCount @relation(fields: [cashCountId], references: [id], onDelete: Cascade)
+  denomination Float
+  kind         String    // COIN | NOTE
+  quantity     Int
+  subtotal     Float
+
+  @@map("denomination_counts")
+}
+
+model CashWithdrawal {
+  id          String    @id @default(uuid())
+  cashCountId String
+  cashCount   CashCount @relation(fields: [cashCountId], references: [id], onDelete: Cascade)
+  amount      Float
+  purpose     String
+  takenAt     DateTime  @default(now())
+
+  @@map("cash_withdrawals")
+}
+
+model CashControlSettings {
+  id                    String    @id @default(uuid())
+  alertRecipients       String    @default("")
+  allowedEmployeeIds    String    @default("") // comma-separated Employee.id list; empty = all employees allowed
+  dailyCutoffTime       String    @default("23:00")
+  timezone              String    @default("Europe/Berlin")
+  discrepancyThreshold  Float     @default(0)
+  initialOpeningBalance Float     @default(0)
+  lastMissingAlertDate  DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  @@map("cash_control_settings")
 }

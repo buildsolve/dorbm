@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -18,11 +19,13 @@ import { EquipmentModule } from './equipment/equipment.module';
 import { BuildingCostModule } from './building-cost/building-cost.module';
 import { TraceModule } from './trace/trace.module';
 import { JournalModule } from './journal/journal.module';
+import { CashControlModule } from './cash-control/cash-control.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    ScheduleModule.forRoot(),
     // Serves the built React frontend (backend/public, copied from frontend/dist at build time).
     // Excludes /api/* so it never shadows the REST routes.
     ServeStaticModule.forRoot({
@@ -44,6 +47,7 @@ import { JournalModule } from './journal/journal.module';
     BuildingCostModule,
     TraceModule,
     JournalModule,
+    CashControlModule,
   ],
 })
 export class AppModule {}

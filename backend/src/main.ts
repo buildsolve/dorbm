@@ -22,6 +22,7 @@ async function bootstrap() {
     .addTag('production')
     .addTag('storage')
     .addTag('dashboard')
+    .addTag('cash-control')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
