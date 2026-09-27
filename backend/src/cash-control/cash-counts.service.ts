@@ -39,7 +39,7 @@ export class CashCountsService {
     if (!employee) throw new NotFoundException('Employee not found');
 
     const previous = await this.prisma.cashCount.findFirst({
-      where: { businessDate: { lt: businessDate } },
+      where: { businessDate: { lt: businessDate }, status: 'SUBMITTED' },
       orderBy: { businessDate: 'desc' },
     });
     const settings = await this.settingsService.get();
