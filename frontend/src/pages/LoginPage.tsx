@@ -111,6 +111,7 @@ export default function LoginPage() {
                 <div className="flex justify-between"><span>Admin</span><span className="font-mono text-[#32363A]">admin@cakeerp.com / admin123</span></div>
                 <div className="flex justify-between"><span>Production</span><span className="font-mono text-[#32363A]">production@cakeerp.com / prod123</span></div>
                 <div className="flex justify-between"><span>Inventory</span><span className="font-mono text-[#32363A]">inventory@cakeerp.com / inv123</span></div>
+                <div className="flex justify-between"><span>Kasse</span><span className="font-mono text-[#32363A]">kasse@cakeerp.com / kasse123</span></div>
               </div>
             </div>
           </div>
