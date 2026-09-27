@@ -168,6 +168,13 @@ export class CashCountsService {
     return count;
   }
 
+  async remove(id: string) {
+    const count = await this.prisma.cashCount.findUnique({ where: { id } });
+    if (!count) throw new NotFoundException('Cash count not found');
+    await this.prisma.cashCount.delete({ where: { id } });
+    return { deleted: true };
+  }
+
   async summary(filters: { from?: string; to?: string }) {
     const counts = await this.list(filters);
     const submitted = counts.filter((c) => c.status === 'SUBMITTED');

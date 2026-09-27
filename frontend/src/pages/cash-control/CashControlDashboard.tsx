@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertCircle, CheckCircle2, Wallet } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Trash2, Wallet } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { cashControlApi } from '../../api/client';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
@@ -16,6 +17,7 @@ function daysAgo(n: number) {
 }
 
 export default function CashControlDashboard() {
+  const qc = useQueryClient();
   const [from, setFrom] = useState(daysAgo(30));
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -29,6 +31,16 @@ export default function CashControlDashboard() {
     queryKey: ['cash-count-detail', selectedId],
     queryFn: () => cashControlApi.getById(selectedId!).then(r => r.data),
     enabled: !!selectedId,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => cashControlApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cash-control-summary'] });
+      setSelectedId(null);
+      toast.success('Kassensturz gelöscht');
+    },
+    onError: () => toast.error('Löschen fehlgeschlagen'),
   });
 
   const counts = summary?.counts ?? [];
@@ -151,6 +163,19 @@ export default function CashControlDashboard() {
                   <img src={detail.signatureImage} alt="Unterschrift" className="border border-[#EBEBEB] rounded-lg max-w-full" />
                 </>
               )}
+              <div className="flex justify-end mt-6 pt-4" style={{ borderTop: '1px solid #EBEBEB' }}>
+                <button
+                  onClick={() => {
+                    if (confirm(`Kassensturz vom ${detail.businessDate.slice(0, 10)} unwiderruflich löschen?`)) {
+                      deleteMutation.mutate(detail.id);
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold text-[#E31C5F] border border-[#F3C6D0] hover:bg-[#FFF0F3]"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Löschen
+                </button>
+              </div>
             </div>
           </div>
         </Modal>

@@ -37,6 +37,13 @@ export class CashCountsController {
     return this.service.removeWithdrawal(id, withdrawalId);
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
+
   @Post(':id/sign')
   sign(@Param('id') id: string, @Body() dto: any) {
     return this.service.sign(id, dto);

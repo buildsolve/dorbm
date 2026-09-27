@@ -232,6 +232,7 @@ export const cashControlApi = {
   sign: (id: string, signatureImage: string) => api.post(`/cash-control/counts/${id}/sign`, { signatureImage }),
   list: (params?: { from?: string; to?: string; status?: string }) => api.get('/cash-control/counts', { params }),
   getById: (id: string) => api.get(`/cash-control/counts/${id}`),
+  delete: (id: string) => api.delete(`/cash-control/counts/${id}`),
   summary: (params?: { from?: string; to?: string }) => api.get('/cash-control/counts/summary', { params }),
   getSettings: () => api.get('/cash-control/settings'),
   updateSettings: (data: any) => api.patch('/cash-control/settings', data),
