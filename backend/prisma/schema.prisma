@@ -595,3 +595,14 @@ model CashControlSettings {
 
   @@map("cash_control_settings")
 }
+
+model CashDeposit {
+  id              String   @id @default(uuid())
+  amount          Float
+  depositedAt     DateTime @default(now())
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@map("cash_deposits")
+}

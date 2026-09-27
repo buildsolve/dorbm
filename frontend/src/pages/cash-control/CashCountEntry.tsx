@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import SignatureCanvas from 'react-signature-canvas';
 import toast from 'react-hot-toast';
-import { Coins, Trash2, Plus, PenLine, CheckCircle2 } from 'lucide-react';
+import { Coins, Trash2, Plus, PenLine, CheckCircle2, Landmark } from 'lucide-react';
 import { cashControlApi, employeeApi } from '../../api/client';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatCurrency } from '../../utils/format';
@@ -27,6 +27,8 @@ export default function CashCountEntry() {
   const [reason, setReason] = useState('');
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [withdrawalPurpose, setWithdrawalPurpose] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositNote, setDepositNote] = useState('');
   const sigRef = useRef<SignatureCanvas>(null);
 
   const { data: employees = [] } = useQuery({
@@ -49,6 +51,11 @@ export default function CashCountEntry() {
   const { data: count } = useQuery({
     queryKey: ['cash-count', businessDate],
     queryFn: () => cashControlApi.getByDate(businessDate).then(r => r.data),
+  });
+
+  const { data: recentDeposits = [] } = useQuery({
+    queryKey: ['cash-deposits'],
+    queryFn: () => cashControlApi.deposits.list().then(r => r.data.slice(0, 5)),
   });
 
   useEffect(() => {
@@ -101,6 +108,16 @@ export default function CashCountEntry() {
   const removeWithdrawalMutation = useMutation({
     mutationFn: (withdrawalId: string) => cashControlApi.removeWithdrawal(count!.id, withdrawalId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cash-count', businessDate] }),
+  });
+
+  const addDepositMutation = useMutation({
+    mutationFn: () => cashControlApi.deposits.create({ amount: Number(depositAmount), note: depositNote || undefined }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cash-deposits'] });
+      setDepositAmount(''); setDepositNote('');
+      toast.success('Einzahlung erfasst');
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Einzahlung fehlgeschlagen'),
   });
 
   const signMutation = useMutation({
@@ -305,6 +322,43 @@ export default function CashCountEntry() {
           )}
         </>
       )}
+
+      <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5 mt-5">
+        <h3 className="text-sm font-bold text-[#222] mb-1 flex items-center gap-2"><Landmark className="w-4 h-4" /> Einzahlung (Bank)</h3>
+        <p className="text-xs text-[#6A6A6A] mb-3">
+          Unabhängig vom Kassensturz — direkt nach dem Abschluss oder auch erst Tage später erfassbar.
+          Wird automatisch vom Anfangsbestand des nächsten Kassensturz abgezogen.
+        </p>
+        <div className="space-y-1.5 mb-3">
+          {recentDeposits.length === 0 && <p className="text-sm text-[#6A6A6A]">Noch keine Einzahlungen erfasst</p>}
+          {recentDeposits.map((d: any) => (
+            <div key={d.id} className="flex items-center justify-between text-sm bg-[#F7F7F7] rounded-lg px-3 py-1.5">
+              <span>{formatCurrency(d.amount)}{d.note ? ` — ${d.note}` : ''}</span>
+              <span className="text-xs text-[#6A6A6A]">{new Date(d.depositedAt).toLocaleString('de-DE')}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="number" min={0} step="0.01" placeholder="Betrag"
+            value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
+            className="w-28 border border-[#DDDDDD] rounded-lg px-2 py-1.5 text-sm"
+          />
+          <input
+            type="text" placeholder="Notiz (optional, z.B. Bankreferenz)"
+            value={depositNote} onChange={e => setDepositNote(e.target.value)}
+            className="flex-1 border border-[#DDDDDD] rounded-lg px-2 py-1.5 text-sm"
+          />
+          <button
+            onClick={() => addDepositMutation.mutate()}
+            disabled={!depositAmount || addDepositMutation.isPending}
+            className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white disabled:opacity-40"
+            style={{ background: '#222' }}
+          >
+            Erfassen
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

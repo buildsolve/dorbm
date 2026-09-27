@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertCircle, CheckCircle2, Trash2, Wallet } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Landmark, Trash2, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cashControlApi } from '../../api/client';
 import PageHeader from '../../components/ui/PageHeader';
@@ -33,12 +33,26 @@ export default function CashControlDashboard() {
     enabled: !!selectedId,
   });
 
+  const { data: deposits = [] } = useQuery({
+    queryKey: ['cash-deposits-range', from, to],
+    queryFn: () => cashControlApi.deposits.list({ from, to }).then(r => r.data),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => cashControlApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cash-control-summary'] });
       setSelectedId(null);
       toast.success('Kassensturz gelöscht');
+    },
+    onError: () => toast.error('Löschen fehlgeschlagen'),
+  });
+
+  const deleteDepositMutation = useMutation({
+    mutationFn: (id: string) => cashControlApi.deposits.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cash-deposits-range'] });
+      toast.success('Einzahlung gelöscht');
     },
     onError: () => toast.error('Löschen fehlgeschlagen'),
   });
@@ -85,6 +99,29 @@ export default function CashControlDashboard() {
             <Line type="monotone" dataKey="difference" stroke="#FF385C" strokeWidth={2} dot={{ r: 3, fill: '#FF385C' }} />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5 mb-6">
+        <h3 className="text-sm font-bold text-[#222] mb-3 flex items-center gap-2"><Landmark className="w-4 h-4" /> Einzahlungen (Bank)</h3>
+        <Table
+          columns={[
+            { key: 'depositedAt', header: 'Datum', render: (r: any) => new Date(r.depositedAt).toLocaleString('de-DE') },
+            { key: 'amount', header: 'Betrag', render: (r: any) => formatCurrency(r.amount) },
+            { key: 'note', header: 'Notiz', render: (r: any) => r.note || '—' },
+            {
+              key: 'actions', header: '', render: (r: any) => (
+                <button
+                  onClick={() => { if (confirm('Einzahlung löschen?')) deleteDepositMutation.mutate(r.id); }}
+                  className="text-[#6A6A6A] hover:text-[#E31C5F]"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              ),
+            },
+          ]}
+          data={deposits}
+          emptyText="Keine Einzahlungen im ausgewählten Zeitraum"
+        />
       </div>
 
       <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">

@@ -236,4 +236,9 @@ export const cashControlApi = {
   summary: (params?: { from?: string; to?: string }) => api.get('/cash-control/counts/summary', { params }),
   getSettings: () => api.get('/cash-control/settings'),
   updateSettings: (data: any) => api.patch('/cash-control/settings', data),
+  deposits: {
+    create: (data: { amount: number; note?: string }) => api.post('/cash-control/deposits', data),
+    list: (params?: { from?: string; to?: string }) => api.get('/cash-control/deposits', { params }),
+    delete: (id: string) => api.delete(`/cash-control/deposits/${id}`),
+  },
 };

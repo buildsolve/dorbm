@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CashControlSettingsService } from './cash-control-settings.service';
+import { CashDepositsService } from './cash-deposits.service';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -17,7 +18,11 @@ function parseBusinessDate(dateStr: string): Date {
 
 @Injectable()
 export class CashCountsService {
-  constructor(private prisma: PrismaService, private settingsService: CashControlSettingsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settingsService: CashControlSettingsService,
+    private depositsService: CashDepositsService,
+  ) {}
 
   async getByDate(dateStr: string) {
     const businessDate = parseBusinessDate(dateStr);
@@ -43,7 +48,10 @@ export class CashCountsService {
       orderBy: { businessDate: 'desc' },
     });
     const settings = await this.settingsService.get();
-    const openingBalance = previous ? previous.countedAmount : settings.initialOpeningBalance;
+    // Deposits (Einzahlungen) can happen right after a count is signed, or days later — either
+    // way, only deposits made *after* the last verified count's sign-off reduce today's float.
+    const depositsSince = await this.depositsService.totalSince(previous ? previous.signedAt : null);
+    const openingBalance = round2((previous ? previous.countedAmount : settings.initialOpeningBalance) - depositsSince);
 
     return this.prisma.cashCount.create({
       data: {
