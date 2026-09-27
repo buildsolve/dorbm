@@ -144,7 +144,7 @@ export default function CashCountEntry() {
         <div>
           <label className="block text-xs font-medium text-[#6A6A6A] mb-1">Datum</label>
           <input
-            type="date" value={businessDate} disabled={!!count}
+            type="date" value={businessDate}
             onChange={e => setBusinessDate(e.target.value)}
             className="border border-[#DDDDDD] rounded-lg px-3 py-2 text-sm"
           />
