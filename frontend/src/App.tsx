@@ -33,13 +33,18 @@ function RequireRole({ role, children }: { role: string; children: React.ReactNo
   return getStoredUser()?.role === role ? <>{children}</> : <Navigate to="/cash-control" replace />;
 }
 
+function IndexRedirect() {
+  const role = getStoredUser()?.role;
+  return <Navigate to={role === 'CASHIER' ? '/cash-control' : '/dashboard'} replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<IndexRedirect />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="inventory/ingredients" element={<IngredientsPage />} />
           <Route path="inventory/suppliers" element={<SuppliersPage />} />

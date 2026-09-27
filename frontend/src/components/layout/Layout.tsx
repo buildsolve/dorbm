@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
   LayoutDashboard, Package, BookOpen, ShoppingBag, Factory, Warehouse,
@@ -8,6 +8,11 @@ import { getStoredUser, clearAuth } from '../../hooks/useAuth';
 import clsx from 'clsx';
 
 function buildNav(role?: string) {
+  if (role === 'CASHIER') {
+    return [
+      { label: 'Kassenführung', icon: Wallet, children: [{ label: 'Kassensturz', to: '/cash-control' }] },
+    ];
+  }
   return [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
   {
@@ -68,11 +73,16 @@ export default function Layout() {
   const user = getStoredUser();
   const nav = buildNav(user?.role);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggle = (label: string) =>
     setOpen(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
 
   const handleLogout = () => { clearAuth(); navigate('/login'); };
+
+  if (user?.role === 'CASHIER' && !location.pathname.startsWith('/cash-control')) {
+    return <Navigate to="/cash-control" replace />;
+  }
 
   return (
     <div className="flex h-screen bg-white">
