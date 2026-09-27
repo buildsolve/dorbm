@@ -86,6 +86,7 @@ export default function CashCountEntry() {
 
   const saveMutation = useMutation({
     mutationFn: () => cashControlApi.patch(count!.id, {
+      employeeId,
       posCashSales: Number(posCashSales) || 0,
       denominationCounts: DENOMINATIONS
         .map(d => ({ denomination: d.value, kind: d.kind, quantity: quantities[d.value.toFixed(2)] || 0 }))
@@ -152,7 +153,7 @@ export default function CashCountEntry() {
         <div>
           <label className="block text-xs font-medium text-[#6A6A6A] mb-1">Mitarbeiter</label>
           <select
-            value={employeeId} disabled={!!count}
+            value={employeeId} disabled={isSubmitted}
             onChange={e => setEmployeeId(e.target.value)}
             className="border border-[#DDDDDD] rounded-lg px-3 py-2 text-sm min-w-[220px]"
           >

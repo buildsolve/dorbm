@@ -72,7 +72,7 @@ export class CashCountsService {
     return count;
   }
 
-  private async recomputeAndSave(id: string, extra: { posCashSales?: number; countedAmount?: number; reason?: string } = {}) {
+  private async recomputeAndSave(id: string, extra: { posCashSales?: number; countedAmount?: number; reason?: string; employeeId?: string } = {}) {
     const count = await this.prisma.cashCount.findUnique({ where: { id }, include: { withdrawals: true } });
     if (!count) throw new NotFoundException('Cash count not found');
 
@@ -91,13 +91,19 @@ export class CashCountsService {
         expectedAmount,
         difference,
         ...(extra.reason !== undefined && { reason: extra.reason }),
+        ...(extra.employeeId !== undefined && { employeeId: extra.employeeId }),
       },
       include: DETAIL_INCLUDE,
     });
   }
 
-  async patch(id: string, dto: { posCashSales?: number; denominationCounts?: { denomination: number; kind: string; quantity: number }[]; reason?: string }) {
+  async patch(id: string, dto: { posCashSales?: number; denominationCounts?: { denomination: number; kind: string; quantity: number }[]; reason?: string; employeeId?: string }) {
     await this.requireDraft(id);
+
+    if (dto.employeeId) {
+      const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId } });
+      if (!employee) throw new NotFoundException('Employee not found');
+    }
 
     let countedAmount: number | undefined;
     if (dto.denominationCounts) {
@@ -118,7 +124,7 @@ export class CashCountsService {
       }
     }
 
-    return this.recomputeAndSave(id, { posCashSales: dto.posCashSales, countedAmount, reason: dto.reason });
+    return this.recomputeAndSave(id, { posCashSales: dto.posCashSales, countedAmount, reason: dto.reason, employeeId: dto.employeeId });
   }
 
   async addWithdrawal(id: string, dto: { amount: number; purpose: string }) {
