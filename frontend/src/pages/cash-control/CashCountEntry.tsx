@@ -56,11 +56,6 @@ export default function CashCountEntry() {
     queryFn: () => cashControlApi.getByDate(businessDate).then(r => r.data),
   });
 
-  const { data: recentDeposits = [] } = useQuery({
-    queryKey: ['cash-deposits'],
-    queryFn: () => cashControlApi.deposits.list().then(r => r.data.slice(0, 5)),
-  });
-
   useEffect(() => {
     if (!count) {
       setQuantities({});
@@ -125,7 +120,6 @@ export default function CashCountEntry() {
   const addDepositMutation = useMutation({
     mutationFn: () => cashControlApi.deposits.create({ amount: Number(depositAmount), note: depositNote || undefined }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['cash-deposits'] });
       setDepositAmount(''); setDepositNote('');
       toast.success('Einzahlung erfasst');
     },
@@ -404,15 +398,6 @@ export default function CashCountEntry() {
           Unabhängig vom Kassensturz — direkt nach dem Abschluss oder auch erst Tage später erfassbar.
           Wird automatisch vom Anfangsbestand des nächsten Kassensturz abgezogen.
         </p>
-        <div className="space-y-1.5 mb-3">
-          {recentDeposits.length === 0 && <p className="text-sm text-[#6A6A6A]">Noch keine Einzahlungen erfasst</p>}
-          {recentDeposits.map((d: any) => (
-            <div key={d.id} className="flex items-center justify-between text-sm bg-[#F7F7F7] rounded-lg px-3 py-1.5">
-              <span>{formatCurrency(d.amount)}{d.note ? ` — ${d.note}` : ''}</span>
-              <span className="text-xs text-[#6A6A6A]">{new Date(d.depositedAt).toLocaleString('de-DE')}</span>
-            </div>
-          ))}
-        </div>
         <div className="flex gap-2">
           <input
             type="number" min={0} step="0.01" placeholder="Betrag"
