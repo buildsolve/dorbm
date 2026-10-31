@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import SignatureCanvas from 'react-signature-canvas';
 import toast from 'react-hot-toast';
-import { Coins, Trash2, Plus, PenLine, CheckCircle2, Landmark } from 'lucide-react';
+import { Coins, Trash2, Plus, PenLine, CheckCircle2, Landmark, ClipboardList } from 'lucide-react';
 import { cashControlApi, employeeApi } from '../../api/client';
 import PageHeader from '../../components/ui/PageHeader';
+import Modal from '../../components/ui/Modal';
 import { formatCurrency } from '../../utils/format';
 
 const DENOMINATIONS: { value: number; kind: 'COIN' | 'NOTE' }[] = [
@@ -17,6 +18,7 @@ const DENOMINATIONS: { value: number; kind: 'COIN' | 'NOTE' }[] = [
 
 const denomLabel = (value: number) => (value < 1 ? `${Math.round(value * 100)} ct` : `€${value}`);
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export default function CashCountEntry() {
   const qc = useQueryClient();
@@ -29,6 +31,7 @@ export default function CashCountEntry() {
   const [withdrawalPurpose, setWithdrawalPurpose] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositNote, setDepositNote] = useState('');
+  const [showReview, setShowReview] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
 
   const { data: employees = [] } = useQuery({
@@ -77,6 +80,13 @@ export default function CashCountEntry() {
     () => DENOMINATIONS.reduce((sum, d) => sum + d.value * (quantities[d.value.toFixed(2)] || 0), 0),
     [quantities],
   );
+
+  // Preview of what a save would produce right now — based on the current unsaved form
+  // state, not the last-saved server values, so Review always shows what's about to happen.
+  const pendingExpectedAmount = count
+    ? round2(count.openingBalance + (Number(posCashSales) || 0) - count.withdrawalsTotal)
+    : 0;
+  const pendingDifference = round2(countedAmount - pendingExpectedAmount);
 
   const startMutation = useMutation({
     mutationFn: () => cashControlApi.createOrGet({ businessDate, employeeId }),
@@ -280,7 +290,15 @@ export default function CashCountEntry() {
           {!isSubmitted && (
             <div className="flex justify-end gap-3 mb-5">
               <button
-                onClick={() => saveMutation.mutate()}
+                onClick={() => setShowReview(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border border-[#DDDDDD] text-[#222]"
+              >
+                <ClipboardList className="w-4 h-4" /> Review
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Kassensturz-Daten jetzt speichern?')) saveMutation.mutate();
+                }}
                 disabled={saveMutation.isPending}
                 className="px-4 py-2 rounded-full text-sm font-semibold border border-[#DDDDDD] text-[#222]"
               >
@@ -320,6 +338,61 @@ export default function CashCountEntry() {
               <h3 className="text-sm font-bold text-[#222] mb-3">Unterschrift</h3>
               <img src={count.signatureImage} alt="Unterschrift" className="border border-[#EBEBEB] rounded-xl max-w-full" />
             </div>
+          )}
+
+          {showReview && (
+            <Modal title="Kassenstatus — Übersicht" onClose={() => setShowReview(false)} size="md">
+              <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Stückelung</h4>
+              <div className="space-y-1 text-sm mb-4">
+                {DENOMINATIONS.filter(d => (quantities[d.value.toFixed(2)] || 0) > 0).map(d => (
+                  <div key={d.value} className="flex justify-between">
+                    <span>{denomLabel(d.value)} × {quantities[d.value.toFixed(2)]}</span>
+                    <span>{formatCurrency(d.value * quantities[d.value.toFixed(2)])}</span>
+                  </div>
+                ))}
+                {DENOMINATIONS.every(d => !(quantities[d.value.toFixed(2)] || 0)) && (
+                  <p className="text-[#6A6A6A]">Noch keine Stückelung erfasst</p>
+                )}
+              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Barentnahmen</h4>
+              <div className="space-y-1 text-sm mb-4">
+                {(count.withdrawals ?? []).length === 0 && <p className="text-[#6A6A6A]">Keine</p>}
+                {(count.withdrawals ?? []).map((w: any) => (
+                  <div key={w.id} className="flex justify-between">
+                    <span>{w.purpose}</span><span>{formatCurrency(w.amount)}</span>
+                  </div>
+                ))}
+              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Kassendifferenz (bei Speichern)</h4>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between"><span>Anfangsbestand</span><span>{formatCurrency(count.openingBalance)}</span></div>
+                <div className="flex justify-between"><span>+ POS-Bareinnahmen</span><span>{formatCurrency(Number(posCashSales) || 0)}</span></div>
+                <div className="flex justify-between"><span>− Barentnahmen</span><span>{formatCurrency(count.withdrawalsTotal)}</span></div>
+                <div className="flex justify-between font-semibold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}>
+                  <span>Soll</span><span>{formatCurrency(pendingExpectedAmount)}</span>
+                </div>
+                <div className="flex justify-between"><span>Ist (gezählt)</span><span>{formatCurrency(countedAmount)}</span></div>
+                <div className="flex justify-between text-base font-bold pt-1.5" style={{ borderTop: '1px solid #EBEBEB', color: Math.abs(pendingDifference) < 0.0001 ? '#008A05' : '#E31C5F' }}>
+                  <span>Differenz</span><span>{formatCurrency(pendingDifference)}</span>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6 pt-4" style={{ borderTop: '1px solid #EBEBEB' }}>
+                <button onClick={() => setShowReview(false)} className="px-4 py-2 rounded-full text-sm font-semibold border border-[#DDDDDD] text-[#222]">
+                  Schließen
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReview(false);
+                    if (confirm('Kassensturz-Daten jetzt speichern?')) saveMutation.mutate();
+                  }}
+                  disabled={saveMutation.isPending}
+                  className="px-4 py-2 rounded-full text-sm font-semibold text-white"
+                  style={{ background: '#FF385C' }}
+                >
+                  Jetzt speichern
+                </button>
+              </div>
+            </Modal>
           )}
         </>
       )}
