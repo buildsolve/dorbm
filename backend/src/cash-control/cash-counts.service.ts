@@ -24,9 +24,45 @@ export class CashCountsService {
     private depositsService: CashDepositsService,
   ) {}
 
+  /**
+   * Deposits (Einzahlungen) can happen before a count exists, while it's still an open draft,
+   * or after it's signed — so expectedAmount is always computed live against whatever deposits
+   * have landed since the baseline (the prior submitted count's signedAt), not frozen at creation.
+   */
+  private async computeLive(count: {
+    openingBalance: number;
+    openingBalanceSince: Date | null;
+    posCashSales: number;
+    countedAmount: number;
+    withdrawals: { amount: number }[];
+  }) {
+    const withdrawalsTotal = round2(count.withdrawals.reduce((sum, w) => sum + w.amount, 0));
+    const depositsTotal = await this.depositsService.totalSince(count.openingBalanceSince);
+    const expectedAmount = round2(count.openingBalance + count.posCashSales - withdrawalsTotal - depositsTotal);
+    const difference = round2(expectedAmount - count.countedAmount);
+    return { withdrawalsTotal, depositsTotal, expectedAmount, difference };
+  }
+
+  /** Recomputes a DRAFT's live totals and persists them if anything changed. No-op for SUBMITTED. */
+  private async syncLive(count: any) {
+    if (count.status !== 'DRAFT') return count;
+    const live = await this.computeLive(count);
+    if (
+      live.withdrawalsTotal === count.withdrawalsTotal &&
+      live.depositsTotal === count.depositsTotal &&
+      live.expectedAmount === count.expectedAmount &&
+      live.difference === count.difference
+    ) {
+      return count;
+    }
+    return this.prisma.cashCount.update({ where: { id: count.id }, data: live, include: DETAIL_INCLUDE });
+  }
+
   async getByDate(dateStr: string) {
     const businessDate = parseBusinessDate(dateStr);
-    return this.prisma.cashCount.findUnique({ where: { businessDate }, include: DETAIL_INCLUDE });
+    const count = await this.prisma.cashCount.findUnique({ where: { businessDate }, include: DETAIL_INCLUDE });
+    if (!count) return null;
+    return this.syncLive(count);
   }
 
   async createOrGet(dto: { businessDate: string; employeeId: string }, createdByUserId?: string) {
@@ -37,7 +73,7 @@ export class CashCountsService {
       if (existing.status === 'SUBMITTED') {
         throw new ConflictException('A cash count has already been submitted for this date');
       }
-      return existing;
+      return this.syncLive(existing);
     }
 
     const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId } });
@@ -48,18 +84,19 @@ export class CashCountsService {
       orderBy: { businessDate: 'desc' },
     });
     const settings = await this.settingsService.get();
-    // Deposits (Einzahlungen) can happen right after a count is signed, or days later — either
-    // way, only deposits made *after* the last verified count's sign-off reduce today's float.
-    const depositsSince = await this.depositsService.totalSince(previous ? previous.signedAt : null);
-    const openingBalance = round2((previous ? previous.countedAmount : settings.initialOpeningBalance) - depositsSince);
+    const openingBalance = previous ? previous.countedAmount : settings.initialOpeningBalance;
+    const openingBalanceSince = previous ? previous.signedAt : null;
+
+    const live = await this.computeLive({ openingBalance, openingBalanceSince, posCashSales: 0, countedAmount: 0, withdrawals: [] });
 
     return this.prisma.cashCount.create({
       data: {
         businessDate,
         employeeId: dto.employeeId,
         openingBalance,
-        expectedAmount: openingBalance,
+        openingBalanceSince,
         createdByUserId,
+        ...live,
       },
       include: DETAIL_INCLUDE,
     });
@@ -78,19 +115,14 @@ export class CashCountsService {
 
     const posCashSales = extra.posCashSales !== undefined ? round2(Number(extra.posCashSales)) : count.posCashSales;
     const countedAmount = extra.countedAmount !== undefined ? round2(Number(extra.countedAmount)) : count.countedAmount;
-    const withdrawalsTotal = round2(count.withdrawals.reduce((sum, w) => sum + w.amount, 0));
-    const expectedAmount = round2(count.openingBalance + posCashSales - withdrawalsTotal);
-    // Positive = shortfall (money missing), negative = surplus — matches how a till reconciliation is normally read.
-    const difference = round2(expectedAmount - countedAmount);
+    const live = await this.computeLive({ ...count, posCashSales, countedAmount });
 
     return this.prisma.cashCount.update({
       where: { id },
       data: {
         posCashSales,
         countedAmount,
-        withdrawalsTotal,
-        expectedAmount,
-        difference,
+        ...live,
         ...(extra.reason !== undefined && { reason: extra.reason }),
         ...(extra.employeeId !== undefined && { employeeId: extra.employeeId }),
       },
@@ -146,8 +178,12 @@ export class CashCountsService {
   }
 
   async sign(id: string, dto: { signatureImage: string }) {
-    const count = await this.requireDraft(id);
+    await this.requireDraft(id);
     if (!dto.signatureImage) throw new BadRequestException('signatureImage is required');
+
+    // Re-sync first — a deposit may have landed since the last save/patch.
+    const fresh = await this.prisma.cashCount.findUnique({ where: { id }, include: { withdrawals: true } });
+    const count = await this.syncLive(fresh);
 
     const settings = await this.settingsService.get();
     const isDiscrepant = Math.abs(count.difference) > settings.discrepancyThreshold;
@@ -180,7 +216,7 @@ export class CashCountsService {
   async getById(id: string) {
     const count = await this.prisma.cashCount.findUnique({ where: { id }, include: DETAIL_INCLUDE });
     if (!count) throw new NotFoundException('Cash count not found');
-    return count;
+    return this.syncLive(count);
   }
 
   async remove(id: string) {

@@ -538,12 +538,14 @@ model CashCount {
   employeeId       String
   employee         Employee  @relation(fields: [employeeId], references: [id])
 
-  openingBalance   Float     @default(0)
-  posCashSales     Float     @default(0)
-  withdrawalsTotal Float     @default(0)
-  expectedAmount   Float     @default(0)
-  countedAmount    Float     @default(0)
-  difference       Float     @default(0)
+  openingBalance     Float     @default(0)
+  openingBalanceSince DateTime? // the prior submitted count's signedAt — deposits after this count against this count live
+  posCashSales       Float     @default(0)
+  withdrawalsTotal   Float     @default(0)
+  depositsTotal      Float     @default(0)
+  expectedAmount     Float     @default(0)
+  countedAmount      Float     @default(0)
+  difference         Float     @default(0)
 
   reason           String?
   signatureImage   String?

@@ -79,7 +79,7 @@ export default function CashCountEntry() {
   // Preview of what a save would produce right now — based on the current unsaved form
   // state, not the last-saved server values, so Review always shows what's about to happen.
   const pendingExpectedAmount = count
-    ? round2(count.openingBalance + (Number(posCashSales) || 0) - count.withdrawalsTotal)
+    ? round2(count.openingBalance + (Number(posCashSales) || 0) - count.withdrawalsTotal - count.depositsTotal)
     : 0;
   // Positive = shortfall, negative = surplus — matches the backend's convention.
   const pendingDifference = round2(pendingExpectedAmount - countedAmount);
@@ -120,6 +120,9 @@ export default function CashCountEntry() {
   const addDepositMutation = useMutation({
     mutationFn: () => cashControlApi.deposits.create({ amount: Number(depositAmount), note: depositNote || undefined }),
     onSuccess: () => {
+      // The currently open draft's Soll/Differenz are computed live against deposits, so
+      // refetch it immediately — no "Speichern" needed to see the effect.
+      qc.invalidateQueries({ queryKey: ['cash-count', businessDate] });
       setDepositAmount(''); setDepositNote('');
       toast.success('Einzahlung erfasst');
     },
@@ -261,6 +264,7 @@ export default function CashCountEntry() {
                   <div className="flex justify-between"><span>Anfangsbestand</span><span>{formatCurrency(count.openingBalance)}</span></div>
                   <div className="flex justify-between"><span>+ POS-Bareinnahmen</span><span>{formatCurrency(count.posCashSales)}</span></div>
                   <div className="flex justify-between"><span>− Barentnahmen</span><span>{formatCurrency(count.withdrawalsTotal)}</span></div>
+                  <div className="flex justify-between"><span>− Einzahlungen</span><span>{formatCurrency(count.depositsTotal)}</span></div>
                   <div className="flex justify-between font-semibold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}>
                     <span>Soll</span><span>{formatCurrency(count.expectedAmount)}</span>
                   </div>
@@ -363,6 +367,7 @@ export default function CashCountEntry() {
                 <div className="flex justify-between"><span>Anfangsbestand</span><span>{formatCurrency(count.openingBalance)}</span></div>
                 <div className="flex justify-between"><span>+ POS-Bareinnahmen</span><span>{formatCurrency(Number(posCashSales) || 0)}</span></div>
                 <div className="flex justify-between"><span>− Barentnahmen</span><span>{formatCurrency(count.withdrawalsTotal)}</span></div>
+                <div className="flex justify-between"><span>− Einzahlungen</span><span>{formatCurrency(count.depositsTotal)}</span></div>
                 <div className="flex justify-between font-semibold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}>
                   <span>Soll</span><span>{formatCurrency(pendingExpectedAmount)}</span>
                 </div>
