@@ -37,8 +37,7 @@ model Employee {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  cashCounts     CashCount[]
-  coinRollCounts CoinRollCount[]
+  cashCounts CashCount[]
 
   @@map("employees")
 }
@@ -547,6 +546,9 @@ model CashCount {
   expectedAmount     Float     @default(0)
   countedAmount      Float     @default(0)
   difference         Float     @default(0)
+  // Coin rolls held in reserve outside the till — counted and signed as part of the same daily
+  // activity, but never added into countedAmount/expectedAmount/difference above.
+  coinRollTotal      Float     @default(0)
 
   reason           String?
   signatureImage   String?
@@ -558,6 +560,7 @@ model CashCount {
 
   denominationCounts DenominationCount[]
   withdrawals        CashWithdrawal[]
+  coinRollLines      CoinRollLine[]
 
   @@map("cash_counts")
 }
@@ -610,34 +613,15 @@ model CashDeposit {
   @@map("cash_deposits")
 }
 
-// Münzenrollen (coin rolls) — held in reserve outside the till, counted and signed off
-// separately from the daily Kassensturz. No Soll/Ist comparison, just a dated, signed tally.
-model CoinRollCount {
-  id              String    @id @default(uuid())
-  businessDate    DateTime  @unique
-  employeeId      String
-  employee        Employee  @relation(fields: [employeeId], references: [id])
-  totalAmount     Float     @default(0)
-  signatureImage  String?
-  signedAt        DateTime?
-  status          String    @default("DRAFT") // DRAFT | SUBMITTED
-  createdByUserId String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  lines CoinRollLine[]
-
-  @@map("coin_roll_counts")
-}
-
+// Münzenrollen (coin rolls) — a line item on the same CashCount, not a separate document.
 model CoinRollLine {
-  id              String        @id @default(uuid())
-  coinRollCountId String
-  coinRollCount   CoinRollCount @relation(fields: [coinRollCountId], references: [id], onDelete: Cascade)
-  denomination    Float
-  coinsPerRoll    Int
-  rollQuantity    Int
-  subtotal        Float
+  id           String    @id @default(uuid())
+  cashCountId  String
+  cashCount    CashCount @relation(fields: [cashCountId], references: [id], onDelete: Cascade)
+  denomination Float
+  coinsPerRoll Int
+  rollQuantity Int
+  subtotal     Float
 
   @@map("coin_roll_lines")
 }

@@ -9,6 +9,7 @@ const DETAIL_INCLUDE = {
   employee: { select: { id: true, name: true } },
   denominationCounts: true,
   withdrawals: { orderBy: { takenAt: 'asc' as const } },
+  coinRollLines: true,
 };
 
 function parseBusinessDate(dateStr: string): Date {
@@ -109,7 +110,7 @@ export class CashCountsService {
     return count;
   }
 
-  private async recomputeAndSave(id: string, extra: { posCashSales?: number; countedAmount?: number; reason?: string; employeeId?: string } = {}) {
+  private async recomputeAndSave(id: string, extra: { posCashSales?: number; countedAmount?: number; reason?: string; employeeId?: string; coinRollTotal?: number } = {}) {
     const count = await this.prisma.cashCount.findUnique({ where: { id }, include: { withdrawals: true } });
     if (!count) throw new NotFoundException('Cash count not found');
 
@@ -125,12 +126,19 @@ export class CashCountsService {
         ...live,
         ...(extra.reason !== undefined && { reason: extra.reason }),
         ...(extra.employeeId !== undefined && { employeeId: extra.employeeId }),
+        ...(extra.coinRollTotal !== undefined && { coinRollTotal: extra.coinRollTotal }),
       },
       include: DETAIL_INCLUDE,
     });
   }
 
-  async patch(id: string, dto: { posCashSales?: number; denominationCounts?: { denomination: number; kind: string; quantity: number }[]; reason?: string; employeeId?: string }) {
+  async patch(id: string, dto: {
+    posCashSales?: number;
+    denominationCounts?: { denomination: number; kind: string; quantity: number }[];
+    coinRollLines?: { denomination: number; coinsPerRoll: number; rollQuantity: number }[];
+    reason?: string;
+    employeeId?: string;
+  }) {
     await this.requireDraft(id);
 
     if (dto.employeeId) {
@@ -157,7 +165,26 @@ export class CashCountsService {
       }
     }
 
-    return this.recomputeAndSave(id, { posCashSales: dto.posCashSales, countedAmount, reason: dto.reason, employeeId: dto.employeeId });
+    let coinRollTotal: number | undefined;
+    if (dto.coinRollLines) {
+      await this.prisma.coinRollLine.deleteMany({ where: { cashCountId: id } });
+      coinRollTotal = round2(
+        dto.coinRollLines.reduce((sum, r) => sum + round2(r.denomination * r.coinsPerRoll * r.rollQuantity), 0),
+      );
+      if (dto.coinRollLines.length) {
+        await this.prisma.coinRollLine.createMany({
+          data: dto.coinRollLines.map((r) => ({
+            cashCountId: id,
+            denomination: r.denomination,
+            coinsPerRoll: r.coinsPerRoll,
+            rollQuantity: r.rollQuantity,
+            subtotal: round2(r.denomination * r.coinsPerRoll * r.rollQuantity),
+          })),
+        });
+      }
+    }
+
+    return this.recomputeAndSave(id, { posCashSales: dto.posCashSales, countedAmount, reason: dto.reason, employeeId: dto.employeeId, coinRollTotal });
   }
 
   async addWithdrawal(id: string, dto: { amount: number; purpose: string }) {
