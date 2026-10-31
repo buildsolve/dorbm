@@ -80,7 +80,8 @@ export class CashCountsService {
     const countedAmount = extra.countedAmount !== undefined ? round2(Number(extra.countedAmount)) : count.countedAmount;
     const withdrawalsTotal = round2(count.withdrawals.reduce((sum, w) => sum + w.amount, 0));
     const expectedAmount = round2(count.openingBalance + posCashSales - withdrawalsTotal);
-    const difference = round2(countedAmount - expectedAmount);
+    // Positive = shortfall (money missing), negative = surplus — matches how a till reconciliation is normally read.
+    const difference = round2(expectedAmount - countedAmount);
 
     return this.prisma.cashCount.update({
       where: { id },

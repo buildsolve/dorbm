@@ -86,7 +86,8 @@ export default function CashCountEntry() {
   const pendingExpectedAmount = count
     ? round2(count.openingBalance + (Number(posCashSales) || 0) - count.withdrawalsTotal)
     : 0;
-  const pendingDifference = round2(countedAmount - pendingExpectedAmount);
+  // Positive = shortfall, negative = surplus — matches the backend's convention.
+  const pendingDifference = round2(pendingExpectedAmount - countedAmount);
 
   const startMutation = useMutation({
     mutationFn: () => cashControlApi.createOrGet({ businessDate, employeeId }),
