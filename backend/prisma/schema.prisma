@@ -37,7 +37,8 @@ model Employee {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  cashCounts CashCount[]
+  cashCounts     CashCount[]
+  coinRollCounts CoinRollCount[]
 
   @@map("employees")
 }
@@ -607,4 +608,36 @@ model CashDeposit {
   createdAt       DateTime @default(now())
 
   @@map("cash_deposits")
+}
+
+// Münzenrollen (coin rolls) — held in reserve outside the till, counted and signed off
+// separately from the daily Kassensturz. No Soll/Ist comparison, just a dated, signed tally.
+model CoinRollCount {
+  id              String    @id @default(uuid())
+  businessDate    DateTime  @unique
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id])
+  totalAmount     Float     @default(0)
+  signatureImage  String?
+  signedAt        DateTime?
+  status          String    @default("DRAFT") // DRAFT | SUBMITTED
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  lines CoinRollLine[]
+
+  @@map("coin_roll_counts")
+}
+
+model CoinRollLine {
+  id              String        @id @default(uuid())
+  coinRollCountId String
+  coinRollCount   CoinRollCount @relation(fields: [coinRollCountId], references: [id], onDelete: Cascade)
+  denomination    Float
+  coinsPerRoll    Int
+  rollQuantity    Int
+  subtotal        Float
+
+  @@map("coin_roll_lines")
 }

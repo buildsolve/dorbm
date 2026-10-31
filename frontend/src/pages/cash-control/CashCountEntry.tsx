@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import SignatureCanvas from 'react-signature-canvas';
 import toast from 'react-hot-toast';
-import { Coins, Trash2, Plus, PenLine, CheckCircle2, Landmark, ClipboardList } from 'lucide-react';
+import { Coins, Trash2, Plus, PenLine, CheckCircle2, Landmark, ClipboardList, PackageOpen } from 'lucide-react';
 import { cashControlApi, employeeApi } from '../../api/client';
 import PageHeader from '../../components/ui/PageHeader';
 import Modal from '../../components/ui/Modal';
@@ -14,6 +14,13 @@ const DENOMINATIONS: { value: number; kind: 'COIN' | 'NOTE' }[] = [
   { value: 1, kind: 'COIN' }, { value: 2, kind: 'COIN' },
   { value: 5, kind: 'NOTE' }, { value: 10, kind: 'NOTE' }, { value: 20, kind: 'NOTE' },
   { value: 50, kind: 'NOTE' }, { value: 100, kind: 'NOTE' }, { value: 200, kind: 'NOTE' }, { value: 500, kind: 'NOTE' },
+];
+
+// Standard Bundesbank coin-roll sizes.
+const ROLL_DENOMINATIONS: { value: number; coinsPerRoll: number }[] = [
+  { value: 0.01, coinsPerRoll: 50 }, { value: 0.02, coinsPerRoll: 50 }, { value: 0.05, coinsPerRoll: 50 },
+  { value: 0.10, coinsPerRoll: 40 }, { value: 0.20, coinsPerRoll: 40 }, { value: 0.50, coinsPerRoll: 40 },
+  { value: 1, coinsPerRoll: 25 }, { value: 2, coinsPerRoll: 25 },
 ];
 
 const denomLabel = (value: number) => (value < 1 ? `${Math.round(value * 100)} ct` : `€${value}`);
@@ -32,7 +39,10 @@ export default function CashCountEntry() {
   const [depositAmount, setDepositAmount] = useState('');
   const [depositNote, setDepositNote] = useState('');
   const [showReview, setShowReview] = useState(false);
+  const [rollEmployeeId, setRollEmployeeId] = useState('');
+  const [rollQuantities, setRollQuantities] = useState<Record<string, number>>({});
   const sigRef = useRef<SignatureCanvas>(null);
+  const rollSigRef = useRef<SignatureCanvas>(null);
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
@@ -134,6 +144,59 @@ export default function CashCountEntry() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cash-count', businessDate] }); toast.success('Kassensturz eingereicht'); },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Unterschrift fehlgeschlagen'),
   });
+
+  // Münzenrollen (coin rolls) — held in reserve outside the till, counted and signed off
+  // separately. Shares the page's date, but is otherwise a fully independent record.
+  const { data: rollCount } = useQuery({
+    queryKey: ['coin-roll-count', businessDate],
+    queryFn: () => cashControlApi.coinRolls.getByDate(businessDate).then(r => r.data),
+  });
+
+  useEffect(() => {
+    if (!rollCount) { setRollQuantities({}); return; }
+    setRollEmployeeId(rollCount.employeeId);
+    const q: Record<string, number> = {};
+    for (const l of rollCount.lines ?? []) q[l.denomination.toFixed(2)] = l.rollQuantity;
+    setRollQuantities(q);
+  }, [rollCount]);
+
+  const rollTotal = useMemo(
+    () => ROLL_DENOMINATIONS.reduce((sum, r) => sum + r.value * r.coinsPerRoll * (rollQuantities[r.value.toFixed(2)] || 0), 0),
+    [rollQuantities],
+  );
+  const rollIsSubmitted = rollCount?.status === 'SUBMITTED';
+
+  const startRollMutation = useMutation({
+    mutationFn: () => cashControlApi.coinRolls.createOrGet({ businessDate, employeeId: rollEmployeeId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['coin-roll-count', businessDate] }),
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Konnte Münzrollenzählung nicht starten'),
+  });
+
+  const saveRollMutation = useMutation({
+    mutationFn: () => cashControlApi.coinRolls.patch(rollCount!.id, {
+      employeeId: rollEmployeeId,
+      lines: ROLL_DENOMINATIONS
+        .map(r => ({ denomination: r.value, coinsPerRoll: r.coinsPerRoll, rollQuantity: rollQuantities[r.value.toFixed(2)] || 0 }))
+        .filter(r => r.rollQuantity > 0),
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['coin-roll-count', businessDate] }); toast.success('Gespeichert'); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Speichern fehlgeschlagen'),
+  });
+
+  const signRollMutation = useMutation({
+    mutationFn: (signatureImage: string) => cashControlApi.coinRolls.sign(rollCount!.id, signatureImage),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['coin-roll-count', businessDate] }); toast.success('Münzrollenzählung eingereicht'); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Unterschrift fehlgeschlagen'),
+  });
+
+  const handleSignRoll = () => {
+    if (!rollSigRef.current || rollSigRef.current.isEmpty()) { toast.error('Bitte unterschreiben'); return; }
+    if (confirm('Münzrollenzählung jetzt speichern und einreichen?')) {
+      saveRollMutation.mutate(undefined, {
+        onSuccess: () => signRollMutation.mutate(rollSigRef.current!.toDataURL('image/png')),
+      });
+    }
+  };
 
   const difference = count ? count.difference : 0;
   const requiresReason = Math.abs(difference) > 0.0001;
@@ -423,6 +486,106 @@ export default function CashCountEntry() {
             Erfassen
           </button>
         </div>
+      </div>
+
+      <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5 mt-5">
+        <h3 className="text-sm font-bold text-[#222] mb-1 flex items-center gap-2"><PackageOpen className="w-4 h-4" /> Münzenrollen</h3>
+        <p className="text-xs text-[#6A6A6A] mb-3">
+          Münzrollen werden außerhalb der Kasse aufbewahrt und separat gezählt und unterschrieben.
+        </p>
+
+        {!rollCount && (
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs font-medium text-[#6A6A6A] mb-1">Mitarbeiter</label>
+              <select
+                value={rollEmployeeId}
+                onChange={e => setRollEmployeeId(e.target.value)}
+                className="border border-[#DDDDDD] rounded-lg px-3 py-2 text-sm min-w-[220px]"
+              >
+                <option value="">Bitte wählen…</option>
+                {selectableEmployees.map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={() => startRollMutation.mutate()}
+              disabled={!rollEmployeeId || startRollMutation.isPending}
+              className="px-4 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-40"
+              style={{ background: '#FF385C' }}
+            >
+              Münzrollenzählung starten
+            </button>
+          </div>
+        )}
+
+        {rollCount && (
+          <>
+            {rollIsSubmitted && (
+              <div className="mb-4 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-medium" style={{ background: '#E8F8EE', color: '#008A05' }}>
+                <CheckCircle2 className="w-4 h-4" /> Für diesen Tag bereits eingereicht — nur noch lesbar.
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {ROLL_DENOMINATIONS.map(r => (
+                <div key={r.value} className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-[#444]">{denomLabel(r.value)} ({r.coinsPerRoll} Stk/Rolle)</span>
+                  <input
+                    type="number" min={0} disabled={rollIsSubmitted}
+                    value={rollQuantities[r.value.toFixed(2)] || ''}
+                    placeholder="0"
+                    onChange={e => setRollQuantities(q => ({ ...q, [r.value.toFixed(2)]: Math.max(0, Number(e.target.value)) }))}
+                    className="w-20 border border-[#DDDDDD] rounded-lg px-2 py-1.5 text-sm text-right"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between text-sm font-bold pt-3 mb-4" style={{ borderTop: '1px solid #EBEBEB' }}>
+              <span>Gesamt</span><span>{formatCurrency(rollTotal)}</span>
+            </div>
+
+            {!rollIsSubmitted && (
+              <>
+                <div className="flex justify-end mb-4">
+                  <button
+                    onClick={() => { if (confirm('Münzrollen-Zählung jetzt speichern?')) saveRollMutation.mutate(); }}
+                    disabled={saveRollMutation.isPending}
+                    className="px-4 py-2 rounded-full text-sm font-semibold border border-[#DDDDDD] text-[#222]"
+                  >
+                    Speichern
+                  </button>
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2 flex items-center gap-1.5"><PenLine className="w-3.5 h-3.5" /> Unterschrift</h4>
+                <div className="border border-[#DDDDDD] rounded-xl overflow-hidden" style={{ touchAction: 'none' }}>
+                  <SignatureCanvas
+                    ref={rollSigRef}
+                    penColor="#222222"
+                    canvasProps={{ width: 600, height: 140, className: 'w-full' }}
+                  />
+                </div>
+                <div className="flex justify-end gap-3 mt-3">
+                  <button onClick={() => rollSigRef.current?.clear()} className="px-4 py-2 rounded-full text-sm font-semibold border border-[#DDDDDD] text-[#222]">
+                    Löschen
+                  </button>
+                  <button
+                    onClick={handleSignRoll}
+                    disabled={saveRollMutation.isPending || signRollMutation.isPending}
+                    className="px-4 py-2 rounded-full text-sm font-semibold text-white"
+                    style={{ background: '#FF385C' }}
+                  >
+                    Unterschreiben &amp; einreichen
+                  </button>
+                </div>
+              </>
+            )}
+
+            {rollIsSubmitted && rollCount.signatureImage && (
+              <>
+                <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Unterschrift</h4>
+                <img src={rollCount.signatureImage} alt="Unterschrift" className="border border-[#EBEBEB] rounded-xl max-w-full" />
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

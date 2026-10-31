@@ -241,4 +241,13 @@ export const cashControlApi = {
     list: (params?: { from?: string; to?: string }) => api.get('/cash-control/deposits', { params }),
     delete: (id: string) => api.delete(`/cash-control/deposits/${id}`),
   },
+  coinRolls: {
+    getByDate: (date: string) => api.get('/cash-control/coin-rolls/by-date', { params: { date } }),
+    createOrGet: (data: { businessDate: string; employeeId: string }) => api.post('/cash-control/coin-rolls', data),
+    patch: (id: string, data: any) => api.patch(`/cash-control/coin-rolls/${id}`, data),
+    sign: (id: string, signatureImage: string) => api.post(`/cash-control/coin-rolls/${id}/sign`, { signatureImage }),
+    list: (params?: { from?: string; to?: string }) => api.get('/cash-control/coin-rolls', { params }),
+    getById: (id: string) => api.get(`/cash-control/coin-rolls/${id}`),
+    delete: (id: string) => api.delete(`/cash-control/coin-rolls/${id}`),
+  },
 };

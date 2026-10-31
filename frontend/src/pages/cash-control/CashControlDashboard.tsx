@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertCircle, CheckCircle2, Landmark, Trash2, Wallet } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Landmark, PackageOpen, Trash2, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cashControlApi } from '../../api/client';
 import PageHeader from '../../components/ui/PageHeader';
@@ -21,6 +21,7 @@ export default function CashControlDashboard() {
   const [from, setFrom] = useState(daysAgo(30));
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedRollId, setSelectedRollId] = useState<string | null>(null);
 
   const { data: summary } = useQuery({
     queryKey: ['cash-control-summary', from, to],
@@ -38,6 +39,17 @@ export default function CashControlDashboard() {
     queryFn: () => cashControlApi.deposits.list({ from, to }).then(r => r.data),
   });
 
+  const { data: rollCounts = [] } = useQuery({
+    queryKey: ['coin-roll-counts-range', from, to],
+    queryFn: () => cashControlApi.coinRolls.list({ from, to }).then(r => r.data),
+  });
+
+  const { data: rollDetail } = useQuery({
+    queryKey: ['coin-roll-detail', selectedRollId],
+    queryFn: () => cashControlApi.coinRolls.getById(selectedRollId!).then(r => r.data),
+    enabled: !!selectedRollId,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => cashControlApi.delete(id),
     onSuccess: () => {
@@ -53,6 +65,16 @@ export default function CashControlDashboard() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cash-deposits-range'] });
       toast.success('Einzahlung gelöscht');
+    },
+    onError: () => toast.error('Löschen fehlgeschlagen'),
+  });
+
+  const deleteRollMutation = useMutation({
+    mutationFn: (id: string) => cashControlApi.coinRolls.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['coin-roll-counts-range'] });
+      setSelectedRollId(null);
+      toast.success('Münzrollenzählung gelöscht');
     },
     onError: () => toast.error('Löschen fehlgeschlagen'),
   });
@@ -121,6 +143,31 @@ export default function CashControlDashboard() {
           ]}
           data={deposits}
           emptyText="Keine Einzahlungen im ausgewählten Zeitraum"
+        />
+      </div>
+
+      <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5 mb-6">
+        <h3 className="text-sm font-bold text-[#222] mb-3 flex items-center gap-2"><PackageOpen className="w-4 h-4" /> Münzenrollen</h3>
+        <Table
+          columns={[
+            { key: 'businessDate', header: 'Datum', render: (r: any) => r.businessDate.slice(0, 10) },
+            { key: 'employee', header: 'Mitarbeiter', render: (r: any) => r.employee?.name ?? '—' },
+            { key: 'totalAmount', header: 'Gesamt', render: (r: any) => formatCurrency(r.totalAmount) },
+            {
+              key: 'status', header: 'Status',
+              render: (r: any) => (
+                <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{
+                  background: r.status === 'SUBMITTED' ? '#E8F8EE' : '#FFF3E8',
+                  color: r.status === 'SUBMITTED' ? '#008A05' : '#C2410C',
+                }}>
+                  {r.status === 'SUBMITTED' ? 'Eingereicht' : 'Entwurf'}
+                </span>
+              ),
+            },
+          ]}
+          data={rollCounts}
+          onRowClick={(r: any) => setSelectedRollId(r.id)}
+          emptyText="Keine Münzrollenzählungen im ausgewählten Zeitraum"
         />
       </div>
 
@@ -214,6 +261,42 @@ export default function CashControlDashboard() {
                 </button>
               </div>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {selectedRollId && rollDetail && (
+        <Modal title={`Münzenrollen — ${rollDetail.businessDate.slice(0, 10)}`} onClose={() => setSelectedRollId(null)} size="sm">
+          <div className="space-y-1.5 text-sm mb-4">
+            <div className="flex justify-between"><span>Mitarbeiter</span><span>{rollDetail.employee?.name}</span></div>
+            {rollDetail.lines.map((l: any) => (
+              <div key={l.id} className="flex justify-between">
+                <span>{l.denomination < 1 ? `${Math.round(l.denomination * 100)} ct` : `€${l.denomination}`} ({l.coinsPerRoll} Stk/Rolle) × {l.rollQuantity}</span>
+                <span>{formatCurrency(l.subtotal)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between font-bold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}>
+              <span>Gesamt</span><span>{formatCurrency(rollDetail.totalAmount)}</span>
+            </div>
+          </div>
+          {rollDetail.signatureImage && (
+            <>
+              <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-1">Unterschrift</h4>
+              <img src={rollDetail.signatureImage} alt="Unterschrift" className="border border-[#EBEBEB] rounded-lg max-w-full mb-4" />
+            </>
+          )}
+          <div className="flex justify-end pt-4" style={{ borderTop: '1px solid #EBEBEB' }}>
+            <button
+              onClick={() => {
+                if (confirm(`Münzrollenzählung vom ${rollDetail.businessDate.slice(0, 10)} unwiderruflich löschen?`)) {
+                  deleteRollMutation.mutate(rollDetail.id);
+                }
+              }}
+              disabled={deleteRollMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold text-[#E31C5F] border border-[#F3C6D0] hover:bg-[#FFF0F3]"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Löschen
+            </button>
           </div>
         </Modal>
       )}
