@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import SignatureCanvas from 'react-signature-canvas';
 import toast from 'react-hot-toast';
@@ -13,8 +13,10 @@ const DENOMINATIONS: { value: number; kind: 'COIN' | 'NOTE' }[] = [
   { value: 0.10, kind: 'COIN' }, { value: 0.20, kind: 'COIN' }, { value: 0.50, kind: 'COIN' },
   { value: 1, kind: 'COIN' }, { value: 2, kind: 'COIN' },
   { value: 5, kind: 'NOTE' }, { value: 10, kind: 'NOTE' }, { value: 20, kind: 'NOTE' },
-  { value: 50, kind: 'NOTE' }, { value: 100, kind: 'NOTE' }, { value: 200, kind: 'NOTE' }, { value: 500, kind: 'NOTE' },
+  { value: 50, kind: 'NOTE' }, { value: 100, kind: 'NOTE' }, { value: 200, kind: 'NOTE' },
 ];
+const COIN_DENOMINATIONS = DENOMINATIONS.filter(d => d.kind === 'COIN');
+const NOTE_DENOMINATIONS = DENOMINATIONS.filter(d => d.kind === 'NOTE');
 
 // Standard Bundesbank coin-roll sizes.
 const ROLL_DENOMINATIONS: { value: number; coinsPerRoll: number }[] = [
@@ -88,10 +90,15 @@ export default function CashCountEntry() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count?.id]);
 
-  const countedAmount = useMemo(
-    () => DENOMINATIONS.reduce((sum, d) => sum + d.value * (quantities[d.value.toFixed(2)] || 0), 0),
+  const coinTotal = useMemo(
+    () => COIN_DENOMINATIONS.reduce((sum, d) => sum + d.value * (quantities[d.value.toFixed(2)] || 0), 0),
     [quantities],
   );
+  const noteTotal = useMemo(
+    () => NOTE_DENOMINATIONS.reduce((sum, d) => sum + d.value * (quantities[d.value.toFixed(2)] || 0), 0),
+    [quantities],
+  );
+  const countedAmount = round2(coinTotal + noteTotal);
 
   const rollTotal = useMemo(
     () => ROLL_DENOMINATIONS.reduce((sum, r) => sum + r.value * r.coinsPerRoll * (rollQuantities[r.value.toFixed(2)] || 0), 0),
@@ -221,22 +228,58 @@ export default function CashCountEntry() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
             <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
               <h3 className="text-sm font-bold text-[#222] mb-3 flex items-center gap-2"><Coins className="w-4 h-4" /> Münzen &amp; Scheine</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {DENOMINATIONS.map(d => (
-                  <div key={d.value} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-[#444]">{denomLabel(d.value)}</span>
-                    <input
-                      type="number" min={0} disabled={isSubmitted}
-                      value={quantities[d.value.toFixed(2)] || ''}
-                      placeholder="0"
-                      onChange={e => setQuantities(q => ({ ...q, [d.value.toFixed(2)]: Math.max(0, Number(e.target.value)) }))}
-                      className="w-20 border border-[#DDDDDD] rounded-lg px-2 py-1.5 text-sm text-right"
-                    />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Münzen</h4>
+                  <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-2 gap-y-1.5">
+                    <span className="text-[10px] font-semibold uppercase text-[#AAAAAA]">Anzahl</span>
+                    <span className="text-[10px] font-semibold uppercase text-[#AAAAAA]">Münze</span>
+                    <span className="text-[10px] font-semibold uppercase text-[#AAAAAA] text-right">Betrag</span>
+                    {COIN_DENOMINATIONS.map(d => (
+                      <Fragment key={d.value}>
+                        <input
+                          type="number" min={0} disabled={isSubmitted}
+                          value={quantities[d.value.toFixed(2)] || ''}
+                          placeholder="0"
+                          onChange={e => setQuantities(q => ({ ...q, [d.value.toFixed(2)]: Math.max(0, Number(e.target.value)) }))}
+                          className="w-16 border border-[#DDDDDD] rounded-lg px-2 py-1 text-sm text-right"
+                        />
+                        <span className="text-sm text-[#444] whitespace-nowrap">× {denomLabel(d.value)}</span>
+                        <span className="text-sm text-right tabular-nums">{formatCurrency(d.value * (quantities[d.value.toFixed(2)] || 0))}</span>
+                      </Fragment>
+                    ))}
                   </div>
-                ))}
+                  <div className="mt-2 pt-2 flex justify-between text-sm font-bold" style={{ borderTop: '1px solid #EBEBEB' }}>
+                    <span>Summe Münzen</span><span>{formatCurrency(coinTotal)}</span>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Scheine</h4>
+                  <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-2 gap-y-1.5">
+                    <span className="text-[10px] font-semibold uppercase text-[#AAAAAA]">Anzahl</span>
+                    <span className="text-[10px] font-semibold uppercase text-[#AAAAAA]">Schein</span>
+                    <span className="text-[10px] font-semibold uppercase text-[#AAAAAA] text-right">Betrag</span>
+                    {NOTE_DENOMINATIONS.map(d => (
+                      <Fragment key={d.value}>
+                        <input
+                          type="number" min={0} disabled={isSubmitted}
+                          value={quantities[d.value.toFixed(2)] || ''}
+                          placeholder="0"
+                          onChange={e => setQuantities(q => ({ ...q, [d.value.toFixed(2)]: Math.max(0, Number(e.target.value)) }))}
+                          className="w-16 border border-[#DDDDDD] rounded-lg px-2 py-1 text-sm text-right"
+                        />
+                        <span className="text-sm text-[#444] whitespace-nowrap">× {denomLabel(d.value)}</span>
+                        <span className="text-sm text-right tabular-nums">{formatCurrency(d.value * (quantities[d.value.toFixed(2)] || 0))}</span>
+                      </Fragment>
+                    ))}
+                  </div>
+                  <div className="mt-2 pt-2 flex justify-between text-sm font-bold" style={{ borderTop: '1px solid #EBEBEB' }}>
+                    <span>Summe Scheine</span><span>{formatCurrency(noteTotal)}</span>
+                  </div>
+                </div>
               </div>
               <div className="mt-4 pt-3 flex justify-between text-sm font-bold" style={{ borderTop: '1px solid #EBEBEB' }}>
-                <span>Gezählt</span><span>{formatCurrency(countedAmount)}</span>
+                <span>Gesamt (Gezählt)</span><span>{formatCurrency(countedAmount)}</span>
               </div>
             </div>
 
@@ -395,17 +438,31 @@ export default function CashCountEntry() {
           {showReview && (
             <Modal title="Kassenstatus — Übersicht" onClose={() => setShowReview(false)} size="md">
               <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Stückelung</h4>
-              <div className="space-y-1 text-sm mb-4">
-                {DENOMINATIONS.filter(d => (quantities[d.value.toFixed(2)] || 0) > 0).map(d => (
+              <div className="space-y-1 text-sm mb-1">
+                {COIN_DENOMINATIONS.filter(d => (quantities[d.value.toFixed(2)] || 0) > 0).map(d => (
                   <div key={d.value} className="flex justify-between">
                     <span>{denomLabel(d.value)} × {quantities[d.value.toFixed(2)]}</span>
                     <span>{formatCurrency(d.value * quantities[d.value.toFixed(2)])}</span>
                   </div>
                 ))}
-                {DENOMINATIONS.every(d => !(quantities[d.value.toFixed(2)] || 0)) && (
-                  <p className="text-[#6A6A6A]">Noch keine Stückelung erfasst</p>
-                )}
               </div>
+              <div className="flex justify-between text-sm font-semibold pt-1 pb-3" style={{ borderTop: '1px solid #EBEBEB' }}>
+                <span>Summe Münzen</span><span>{formatCurrency(coinTotal)}</span>
+              </div>
+              <div className="space-y-1 text-sm mb-1">
+                {NOTE_DENOMINATIONS.filter(d => (quantities[d.value.toFixed(2)] || 0) > 0).map(d => (
+                  <div key={d.value} className="flex justify-between">
+                    <span>{denomLabel(d.value)} × {quantities[d.value.toFixed(2)]}</span>
+                    <span>{formatCurrency(d.value * quantities[d.value.toFixed(2)])}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between text-sm font-semibold pt-1 pb-3" style={{ borderTop: '1px solid #EBEBEB' }}>
+                <span>Summe Scheine</span><span>{formatCurrency(noteTotal)}</span>
+              </div>
+              {DENOMINATIONS.every(d => !(quantities[d.value.toFixed(2)] || 0)) && (
+                <p className="text-[#6A6A6A] mb-4">Noch keine Stückelung erfasst</p>
+              )}
               <h4 className="text-xs font-bold uppercase tracking-wide text-[#6A6A6A] mb-2">Barentnahmen</h4>
               <div className="space-y-1 text-sm mb-4">
                 {(count.withdrawals ?? []).length === 0 && <p className="text-[#6A6A6A]">Keine</p>}
