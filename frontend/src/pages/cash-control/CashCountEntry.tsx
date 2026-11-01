@@ -81,7 +81,12 @@ export default function CashCountEntry() {
     const rq: Record<string, number> = {};
     for (const l of count.coinRollLines ?? []) rq[l.denomination.toFixed(2)] = l.rollQuantity;
     setRollQuantities(rq);
-  }, [count]);
+    // Deliberately keyed on the record's identity, not the whole `count` object: react-query
+    // gives a new object on every background refetch (e.g. after adding a withdrawal/deposit),
+    // and re-running this on every refetch would wipe out denomination/POS/roll edits the
+    // employee hasn't saved yet. Only re-sync when actually switching to a different record.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count?.id]);
 
   const countedAmount = useMemo(
     () => DENOMINATIONS.reduce((sum, d) => sum + d.value * (quantities[d.value.toFixed(2)] || 0), 0),
@@ -162,7 +167,11 @@ export default function CashCountEntry() {
   const handleSign = () => {
     if (!sigRef.current || sigRef.current.isEmpty()) { toast.error('Bitte unterschreiben'); return; }
     if (requiresReason && !reason.trim()) { toast.error('Bitte Grund für die Kassendifferenz angeben'); return; }
-    signMutation.mutate(sigRef.current.toDataURL('image/png'));
+    // Always save first so the backend sees the current reason/denominations/rolls even if the
+    // employee typed a reason (or anything else) without clicking Speichern separately first.
+    saveMutation.mutate(undefined, {
+      onSuccess: () => signMutation.mutate(sigRef.current!.toDataURL('image/png')),
+    });
   };
 
   return (
