@@ -35,12 +35,15 @@ export class CashCountsService {
     openingBalanceSince: Date | null;
     posCashSales: number;
     countedAmount: number;
+    coinRollTotal: number;
     withdrawals: { amount: number }[];
   }) {
     const withdrawalsTotal = round2(count.withdrawals.reduce((sum, w) => sum + w.amount, 0));
     const depositsTotal = await this.depositsService.totalSince(count.openingBalanceSince);
     const expectedAmount = round2(count.openingBalance + count.posCashSales - withdrawalsTotal - depositsTotal);
-    const difference = round2(expectedAmount - count.countedAmount);
+    // Anfangsbestand already folds in the previous day's Munzenrollen (see createOrGet), so
+    // today's counted side must also include today's Munzenrollen for the comparison to balance.
+    const difference = round2(expectedAmount - count.countedAmount - count.coinRollTotal);
     return { withdrawalsTotal, depositsTotal, expectedAmount, difference };
   }
 
@@ -89,7 +92,7 @@ export class CashCountsService {
     const openingBalance = previous ? round2(previous.countedAmount + previous.coinRollTotal) : settings.initialOpeningBalance;
     const openingBalanceSince = previous ? previous.signedAt : null;
 
-    const live = await this.computeLive({ openingBalance, openingBalanceSince, posCashSales: 0, countedAmount: 0, withdrawals: [] });
+    const live = await this.computeLive({ openingBalance, openingBalanceSince, posCashSales: 0, countedAmount: 0, coinRollTotal: 0, withdrawals: [] });
 
     return this.prisma.cashCount.create({
       data: {
@@ -118,7 +121,8 @@ export class CashCountsService {
     const posCashSales = extra.posCashSales !== undefined ? round2(Number(extra.posCashSales)) : count.posCashSales;
     const countedAmount = extra.countedAmount !== undefined ? round2(Number(extra.countedAmount)) : count.countedAmount;
     const openingBalance = extra.openingBalance !== undefined ? round2(Number(extra.openingBalance)) : count.openingBalance;
-    const live = await this.computeLive({ ...count, posCashSales, countedAmount, openingBalance });
+    const coinRollTotal = extra.coinRollTotal !== undefined ? round2(Number(extra.coinRollTotal)) : count.coinRollTotal;
+    const live = await this.computeLive({ ...count, posCashSales, countedAmount, openingBalance, coinRollTotal });
 
     return this.prisma.cashCount.update({
       where: { id },
@@ -126,10 +130,10 @@ export class CashCountsService {
         posCashSales,
         countedAmount,
         openingBalance,
+        coinRollTotal,
         ...live,
         ...(extra.reason !== undefined && { reason: extra.reason }),
         ...(extra.employeeId !== undefined && { employeeId: extra.employeeId }),
-        ...(extra.coinRollTotal !== undefined && { coinRollTotal: extra.coinRollTotal }),
       },
       include: DETAIL_INCLUDE,
     });

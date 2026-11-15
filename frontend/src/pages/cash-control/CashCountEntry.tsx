@@ -110,8 +110,10 @@ export default function CashCountEntry() {
   const pendingExpectedAmount = count
     ? round2(count.openingBalance + (Number(posCashSales) || 0) - count.withdrawalsTotal - count.depositsTotal)
     : 0;
-  // Positive = shortfall, negative = surplus — matches the backend's convention.
-  const pendingDifference = round2(pendingExpectedAmount - countedAmount);
+  // Anfangsbestand already folds in yesterday's Münzenrollen, so today's side of the
+  // comparison must include today's Münzenrollen too — matches the backend's convention.
+  // Positive = shortfall, negative = surplus.
+  const pendingDifference = round2(pendingExpectedAmount - countedAmount - rollTotal);
 
   const startMutation = useMutation({
     mutationFn: () => cashControlApi.createOrGet({ businessDate, employeeId }),
@@ -340,7 +342,8 @@ export default function CashCountEntry() {
                   <div className="flex justify-between font-semibold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}>
                     <span>Soll</span><span>{formatCurrency(count.expectedAmount)}</span>
                   </div>
-                  <div className="flex justify-between"><span>Ist (gezählt)</span><span>{formatCurrency(count.countedAmount)}</span></div>
+                  <div className="flex justify-between"><span>Ist (Kasse gezählt)</span><span>{formatCurrency(count.countedAmount)}</span></div>
+                  <div className="flex justify-between"><span>+ Münzenrollen</span><span>{formatCurrency(count.coinRollTotal)}</span></div>
                   <div className="flex justify-between text-base font-bold pt-1.5" style={{ borderTop: '1px solid #EBEBEB', color: Math.abs(difference) < 0.0001 ? '#008A05' : '#E31C5F' }}>
                     <span>Differenz</span><span>{formatCurrency(difference)}</span>
                   </div>
@@ -493,7 +496,8 @@ export default function CashCountEntry() {
                 <div className="flex justify-between font-semibold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}>
                   <span>Soll</span><span>{formatCurrency(pendingExpectedAmount)}</span>
                 </div>
-                <div className="flex justify-between"><span>Ist (gezählt)</span><span>{formatCurrency(countedAmount)}</span></div>
+                <div className="flex justify-between"><span>Ist (Kasse gezählt)</span><span>{formatCurrency(countedAmount)}</span></div>
+                <div className="flex justify-between"><span>+ Münzenrollen</span><span>{formatCurrency(rollTotal)}</span></div>
                 <div className="flex justify-between text-base font-bold pt-1.5" style={{ borderTop: '1px solid #EBEBEB', color: Math.abs(pendingDifference) < 0.0001 ? '#008A05' : '#E31C5F' }}>
                   <span>Differenz</span><span>{formatCurrency(pendingDifference)}</span>
                 </div>
