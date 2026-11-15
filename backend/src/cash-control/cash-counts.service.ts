@@ -85,7 +85,8 @@ export class CashCountsService {
       orderBy: { businessDate: 'desc' },
     });
     const settings = await this.settingsService.get();
-    const openingBalance = previous ? previous.countedAmount : settings.initialOpeningBalance;
+    // Anfangsbestand = Til + Münzenrollen carried over from the previous submitted day.
+    const openingBalance = previous ? round2(previous.countedAmount + previous.coinRollTotal) : settings.initialOpeningBalance;
     const openingBalanceSince = previous ? previous.signedAt : null;
 
     const live = await this.computeLive({ openingBalance, openingBalanceSince, posCashSales: 0, countedAmount: 0, withdrawals: [] });
@@ -110,19 +111,21 @@ export class CashCountsService {
     return count;
   }
 
-  private async recomputeAndSave(id: string, extra: { posCashSales?: number; countedAmount?: number; reason?: string; employeeId?: string; coinRollTotal?: number } = {}) {
+  private async recomputeAndSave(id: string, extra: { posCashSales?: number; countedAmount?: number; reason?: string; employeeId?: string; coinRollTotal?: number; openingBalance?: number } = {}) {
     const count = await this.prisma.cashCount.findUnique({ where: { id }, include: { withdrawals: true } });
     if (!count) throw new NotFoundException('Cash count not found');
 
     const posCashSales = extra.posCashSales !== undefined ? round2(Number(extra.posCashSales)) : count.posCashSales;
     const countedAmount = extra.countedAmount !== undefined ? round2(Number(extra.countedAmount)) : count.countedAmount;
-    const live = await this.computeLive({ ...count, posCashSales, countedAmount });
+    const openingBalance = extra.openingBalance !== undefined ? round2(Number(extra.openingBalance)) : count.openingBalance;
+    const live = await this.computeLive({ ...count, posCashSales, countedAmount, openingBalance });
 
     return this.prisma.cashCount.update({
       where: { id },
       data: {
         posCashSales,
         countedAmount,
+        openingBalance,
         ...live,
         ...(extra.reason !== undefined && { reason: extra.reason }),
         ...(extra.employeeId !== undefined && { employeeId: extra.employeeId }),
@@ -132,12 +135,16 @@ export class CashCountsService {
     });
   }
 
+  // openingBalance is admin-correctable: a draft seeds it once at creation time from either the
+  // previous submitted day's Til+Münzenrollen or the settings fallback, so a draft created before
+  // that fallback was configured (or before day-1 go-live data was known) can be stuck wrong.
   async patch(id: string, dto: {
     posCashSales?: number;
     denominationCounts?: { denomination: number; kind: string; quantity: number }[];
     coinRollLines?: { denomination: number; coinsPerRoll: number; rollQuantity: number }[];
     reason?: string;
     employeeId?: string;
+    openingBalance?: number;
   }) {
     await this.requireDraft(id);
 
@@ -184,7 +191,7 @@ export class CashCountsService {
       }
     }
 
-    return this.recomputeAndSave(id, { posCashSales: dto.posCashSales, countedAmount, reason: dto.reason, employeeId: dto.employeeId, coinRollTotal });
+    return this.recomputeAndSave(id, { posCashSales: dto.posCashSales, countedAmount, reason: dto.reason, employeeId: dto.employeeId, coinRollTotal, openingBalance: dto.openingBalance });
   }
 
   async addWithdrawal(id: string, dto: { amount: number; purpose: string }) {
