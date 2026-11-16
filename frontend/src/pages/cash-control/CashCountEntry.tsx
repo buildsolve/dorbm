@@ -409,10 +409,11 @@ export default function CashCountEntry() {
             <div className="bg-white border border-[#EBEBEB] rounded-2xl p-5">
               <h3 className="text-sm font-bold text-[#222] mb-3 flex items-center gap-2"><PenLine className="w-4 h-4" /> Unterschrift</h3>
               <div className="border border-[#DDDDDD] rounded-xl overflow-hidden" style={{ touchAction: 'none' }}>
+                {/* No explicit width/height: the library only auto-sizes to the real CSS box (devicePixelRatio-scaled) when these are left undefined. */}
                 <SignatureCanvas
                   ref={sigRef}
                   penColor="#222222"
-                  canvasProps={{ width: 600, height: 180, className: 'w-full' }}
+                  canvasProps={{ className: 'w-full', style: { height: '180px', display: 'block' } }}
                 />
               </div>
               <div className="flex justify-end gap-3 mt-3">
