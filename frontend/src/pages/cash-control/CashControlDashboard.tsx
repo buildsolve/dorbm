@@ -130,7 +130,8 @@ export default function CashControlDashboard() {
             { key: 'businessDate', header: 'Datum', render: (r: any) => r.businessDate.slice(0, 10) },
             { key: 'employee', header: 'Mitarbeiter', render: (r: any) => r.employee?.name ?? '—' },
             { key: 'expectedAmount', header: 'Soll', render: (r: any) => formatCurrency(r.expectedAmount) },
-            { key: 'countedAmount', header: 'Ist', render: (r: any) => formatCurrency(r.countedAmount) },
+            { key: 'countedAmount', header: 'Ist (Kasse)', render: (r: any) => formatCurrency(r.countedAmount) },
+            { key: 'coinRollTotal', header: 'Münzenrollen', render: (r: any) => formatCurrency(r.coinRollTotal) },
             {
               key: 'difference', header: 'Differenz',
               render: (r: any) => (
@@ -200,8 +201,9 @@ export default function CashControlDashboard() {
               <div className="space-y-1.5 text-sm mb-4">
                 <div className="flex justify-between"><span>Mitarbeiter</span><span>{detail.employee?.name}</span></div>
                 <div className="flex justify-between"><span>Soll</span><span>{formatCurrency(detail.expectedAmount)}</span></div>
-                <div className="flex justify-between"><span>Ist</span><span>{formatCurrency(detail.countedAmount)}</span></div>
-                <div className="flex justify-between font-bold"><span>Differenz</span><span>{formatCurrency(detail.difference)}</span></div>
+                <div className="flex justify-between"><span>Ist (Kasse gezählt)</span><span>{formatCurrency(detail.countedAmount)}</span></div>
+                <div className="flex justify-between"><span>+ Münzenrollen</span><span>{formatCurrency(detail.coinRollTotal)}</span></div>
+                <div className="flex justify-between font-bold pt-1.5" style={{ borderTop: '1px solid #EBEBEB' }}><span>Differenz</span><span>{formatCurrency(detail.difference)}</span></div>
               </div>
               {detail.reason && (
                 <>

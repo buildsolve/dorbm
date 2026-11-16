@@ -277,6 +277,7 @@ export class CashCountsService {
         employee: c.employee,
         expectedAmount: c.expectedAmount,
         countedAmount: c.countedAmount,
+        coinRollTotal: c.coinRollTotal,
         difference: c.difference,
         status: c.status,
       })),
