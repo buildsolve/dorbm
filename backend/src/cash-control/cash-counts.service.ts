@@ -43,7 +43,8 @@ export class CashCountsService {
     const expectedAmount = round2(count.openingBalance + count.posCashSales - withdrawalsTotal - depositsTotal);
     // Anfangsbestand already folds in the previous day's Munzenrollen (see createOrGet), so
     // today's counted side must also include today's Munzenrollen for the comparison to balance.
-    const difference = round2(expectedAmount - count.countedAmount - count.coinRollTotal);
+    // Differenz = Ist - Soll: positive = surplus (more cash found than expected), negative = shortfall.
+    const difference = round2(count.countedAmount + count.coinRollTotal - expectedAmount);
     return { withdrawalsTotal, depositsTotal, expectedAmount, difference };
   }
 

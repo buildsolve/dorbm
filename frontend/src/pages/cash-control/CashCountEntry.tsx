@@ -112,8 +112,8 @@ export default function CashCountEntry() {
     : 0;
   // Anfangsbestand already folds in yesterday's Münzenrollen, so today's side of the
   // comparison must include today's Münzenrollen too — matches the backend's convention.
-  // Positive = shortfall, negative = surplus.
-  const pendingDifference = round2(pendingExpectedAmount - countedAmount - rollTotal);
+  // Differenz = Ist - Soll: positive = surplus, negative = shortfall.
+  const pendingDifference = round2(countedAmount + rollTotal - pendingExpectedAmount);
 
   const startMutation = useMutation({
     mutationFn: () => cashControlApi.createOrGet({ businessDate, employeeId }),
