@@ -258,6 +258,18 @@ export class CashCountsService {
     return this.syncLive(count);
   }
 
+  // One-off migration helper for records signed before the Differenz sign convention flipped
+  // to Ist - Soll. Touches only the stored `difference` scalar, nothing else about the record.
+  async flipDifferenceSign(id: string) {
+    const count = await this.prisma.cashCount.findUnique({ where: { id } });
+    if (!count) throw new NotFoundException('Cash count not found');
+    return this.prisma.cashCount.update({
+      where: { id },
+      data: { difference: round2(-count.difference) },
+      include: DETAIL_INCLUDE,
+    });
+  }
+
   async remove(id: string) {
     const count = await this.prisma.cashCount.findUnique({ where: { id } });
     if (!count) throw new NotFoundException('Cash count not found');
