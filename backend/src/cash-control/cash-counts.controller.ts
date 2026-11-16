@@ -44,13 +44,6 @@ export class CashCountsController {
     return this.service.remove(id);
   }
 
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @Post(':id/flip-difference-sign')
-  flipDifferenceSign(@Param('id') id: string) {
-    return this.service.flipDifferenceSign(id);
-  }
-
   @Post(':id/sign')
   sign(@Param('id') id: string, @Body() dto: any) {
     return this.service.sign(id, dto);
